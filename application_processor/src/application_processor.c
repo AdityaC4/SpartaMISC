@@ -391,6 +391,7 @@ int validate_pin() {
         return SUCCESS_RETURN;
     }
     print_error("Invalid PIN!\n");
+    sleep(4);
     return ERROR_RETURN;
 }
 
