@@ -28,6 +28,7 @@
 #include "simple_flash.h"
 #include "host_messaging.h"
 #ifdef CRYPTO_EXAMPLE
+// #include "user_settings.h"
 #include "simple_crypto.h"
 #include "crypto_test.h"
 #endif

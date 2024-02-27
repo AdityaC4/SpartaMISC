@@ -51,11 +51,11 @@ int create_keypair() {
 	print_hex_debug(hash_out, WC_SHA256_DIGEST_SIZE);
 
 	// SIGN HASH
-	byte sig_out[128];
-	int sigSz;
+	byte sig_out[256];
+	word32 sigSz;
 
 	print_debug("Signing hash with ECC key... ");
-	ret = wc_ecc_sign_hash(hash_out, WC_SHA256_DIGEST_SIZE, sig_out, 128, &sigSz, &key);
+	ret = wc_ecc_sign_hash(hash_out, WC_SHA256_DIGEST_SIZE, sig_out, &sigSz, &mRng, &key);
 	if (ret != 0) {
 		print_debug("Error signing hash.");
 		return -1;
@@ -68,5 +68,7 @@ int create_keypair() {
 	wc_ecc_key_free(&key);
 	ret = wc_FreeRng(&mRng);
 	print_debug("WC_RNG and ECC Key 'freed' with ret %d.", ret);
+
+	return 0;
 
 }
