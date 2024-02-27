@@ -3,6 +3,11 @@
 
 #include <wolfssl/wolfcrypt/random.h>
 
+#define ECC_CURVE			ECC_SECP256R1
+#define PUBKEY_BUF_LEN		ECC_BUFSIZE
+#define PUBKEY_LEN 			ECC_MAXSIZE+1
+#define MAX_CERT_SIZE       4096
+
 int create_keypair() {
 	print_info("In create_keypair()");
 
@@ -14,7 +19,7 @@ int create_keypair() {
 
 	ret = wc_ecc_init(&key);
     if (ret == 0) {
-        ret = wc_ecc_make_key(&mRng, 32, &key);
+        ret = wc_ecc_make_key_ex(&mRng, 32, &key, ECC_CURVE);
     }
 
     if (ret != 0) {
@@ -51,7 +56,7 @@ int create_keypair() {
 	print_hex_debug(hash_out, WC_SHA256_DIGEST_SIZE);
 
 	// SIGN HASH
-	byte sig_out[256];
+	byte sig_out[ECC_MAX_SIG_SIZE]; // 512?
 	word32 sigSz;
 
 	print_debug("Signing hash with ECC key... ");
@@ -63,11 +68,64 @@ int create_keypair() {
 	print_debug("Signed hash with signature length %d:", sigSz);
 	print_hex_debug(sig_out, sigSz);
 
-	// Free stuff
+	// EXPORT PUBLIC KEY
+	print_debug("Exporting public key to x963...");
+
+	byte pubkey_buf[PUBKEY_BUF_LEN];
+	memset(pubkey_buf, 0, PUBKEY_BUF_LEN);
+
+	ret = wc_ecc_export_x963(&key, pubkey_buf, PUBKEY_BUF_LEN);
+	if (ret != 0) {
+		print_debug("ECC public key x963 export failed! %d\n", ret);
+		return -1;
+	}
+	print_debug("Exported public key to a buffer as x963: ");
+	print_hex_debug(pubkey_buf, PUBKEY_BUF_LEN);
+
+	// IMPORT INTO NEW KEY
+	print_debug("Importing public key into new object...");
+
+	ecc_key key2; 
+
+	ret = wc_ecc_init(&key2);
+	if (ret != 0) {
+		print_debug("Could not initialize new key");
+		return -1;
+	}
+	
+	ret = wc_ecc_import_x963_ex(pubkey_buf, PUBKEY_LEN, &key2, ECC_CURVE);
+
+    if (ret != 0) {
+        print_debug("Ecc import x963 failed %d\n", ret);
+        return -1;
+    }
+
+    print_debug("Succesfully imported public key!");
+
+    // VERIFY HASH
+    print_debug("Verifying signature with imported public key...");
+
+    int stat = -1;
+
+    ret = wc_ecc_verify_hash(sig_out, sigSz, hash_out, WC_SHA256_DIGEST_SIZE, &stat, &key2);
+
+    if (ret != 0) {
+        print_debug("Signature verification returned error %d\n", ret);
+        return -1;
+    }
+    if (stat != 1) {
+        print_debug("Signature verification rejected %d\n", stat);
+        return -1;
+    }
+
+    print_debug("Signature verified successfully! ");
+
+	// FREE STUFF
 	print_debug("'Freeing' WC_RNG and ECC key... (?)");
 	wc_ecc_key_free(&key);
 	ret = wc_FreeRng(&mRng);
 	print_debug("WC_RNG and ECC Key 'freed' with ret %d.", ret);
+
 
 	return 0;
 
