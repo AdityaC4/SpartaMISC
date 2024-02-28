@@ -34,7 +34,7 @@ def main():
 
 	# Generate signature
 	h = SHA256.new(cert_data)
-	signer = DSS.new(host_private_key, 'fips-186-3')
+	signer = DSS.new(host_private_key, 'fips-186-3', 'der')
 	signature = signer.sign(h)
 
 	# Get host public key in DER format
@@ -51,6 +51,10 @@ def main():
 	print(host_public_key_der)
 	print(f"AP PUBLIC KEY DER of length {len(ap_public_key_der)} :")
 	print(ap_public_key_der)
+	print(f"CERTIFICATE DATA OF LENGTH {len(cert_data)}")
+	print(cert_data)
+	print(f"CERTIFICATE HASH OF LENGTH {len(h.digest())}")
+	print(h.hexdigest())
 	print(f"SIGNATURE OF CERTIFICATE of length {len(signature)}:")
 	print(binascii.hexlify(bytearray(signature)))
 
