@@ -18,7 +18,7 @@
 #include "mxc_delay.h"
 #include "mxc_device.h"
 #include "nvic_table.h"
-
+#include "trng.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -384,6 +384,10 @@ void boot() {
 
 // Compare the entered PIN to the correct PIN
 int validate_pin() {
+    MXC_TRNG_Init();
+    uint32_t sleeptime = (MXC_TRNG_RandomInt() % 1800000) + 3000000
+    MXC_TRNG_Shutdown();
+    MXC_Delay(sleeptime);
     char buf[50];
     recv_input("Enter pin: ", buf);
     if (!strcmp(buf, AP_PIN)) {
@@ -391,7 +395,6 @@ int validate_pin() {
         return SUCCESS_RETURN;
     }
     print_error("Invalid PIN!\n");
-    sleep(4);
     return ERROR_RETURN;
 }
 
