@@ -39,3 +39,6 @@ ENTRY=firmware_startup
 
 # Enable Crypto Example
 CRYPTO_EXAMPLE=1
+ectf_prebuild_ap:
+	cp ../patch/random.c wolfssl/wolfcrypt/src/random.c
+	poetry run ectf_prebuild_ap # runs registered build.py script

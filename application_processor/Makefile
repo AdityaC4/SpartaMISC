@@ -436,6 +436,3 @@ clean:
 
 # The rule to clean out all the build products.
 distclean: clean libclean
-
-ectf_prebuild_ap:
-	poetry run ectf_prebuild_ap # runs registered build.py script
