@@ -202,4 +202,7 @@ int i2c_simple_read_status_generic(i2c_addr_t addr, ECTF_I2C_REGS reg);
 */
 int i2c_simple_write_status_generic(i2c_addr_t addr, ECTF_I2C_REGS reg, uint8_t value);
 
+void printReceivedI2CMessage(const uint8_t* message, size_t length);
+***print messages 
+
 #endif
