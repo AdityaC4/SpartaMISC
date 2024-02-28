@@ -1,5 +1,11 @@
 #include "crypto_test.h"
 #include "host_messaging.h"
+#include "ectf_keys.h"
+
+#include "wolfssl/wolfcrypt/ecc.h"
+#include "wolfssl/wolfcrypt/hash.h"
+#include "wolfssl/wolfcrypt/random.h"
+#include "wolfssl/wolfcrypt/asn_public.h"
 
 #define ECC_CURVE			ECC_SECP256R1
 #define PUBKEY_BUF_LEN		ECC_BUFSIZE
@@ -16,8 +22,15 @@ int create_keypair() {
 	ecc_key key; 
 
 	ret = wc_ecc_init(&key);
+
     if (ret == 0) {
-        ret = wc_ecc_make_key_ex(&mRng, 32, &key, ECC_CURVE);
+        // ret = wc_ecc_make_key_ex(&mRng, 32, &key, ECC_CURVE);
+
+        print_debug("Importing key from der...");
+
+        byte privkeyder[] = AP_PRIVKEY_DER;
+        word32 idx = 0;
+        ret = wc_EccPrivateKeyDecode(privkeyder, &idx, &key, (word32) sizeof(privkeyder));
     }
 
     if (ret != 0) {
@@ -25,7 +38,7 @@ int create_keypair() {
         return -1;
     }
 
-    print_debug("Key generated");
+    print_debug("Key initialized!");
 
     int check_result = wc_ecc_check_key(&key);
 

@@ -7,8 +7,11 @@ __check_defined = \
 	$(if $(value $1),, \
 		$(error Undefined $1))
 
-all:
+all: host_secrets
 	echo "#define SECRET 1234" > global_secrets.h
+
+host_secrets:
+	poetry run ectf_gen_host_secrets
 
 clean:
 	rm -f global_secrets.h

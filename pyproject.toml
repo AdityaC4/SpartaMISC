@@ -29,6 +29,7 @@ argparse = "^1.4.0"
 loguru = "^0.7.2"
 gdbgui = "^0.15.2.0"
 tqdm = "^4.66.1"
+pycryptodome = "^3.20.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -43,3 +44,5 @@ ectf_boot = "ectf_tools.boot_tool:main"
 ectf_list = "ectf_tools.list_tool:main"
 ectf_replace = "ectf_tools.replace_tool:main"
 ectf_update = "ectf_tools.update:main"
+ectf_gen_host_secrets = "deployment.gen_host_secrets:main"
+ectf_prebuild_ap = "application_processor.build:main"

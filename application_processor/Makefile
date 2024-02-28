@@ -424,8 +424,7 @@ ifeq "$(MAKECMDGOALS)" ""
 MAKECMDGOALS:=$(.DEFAULT_GOAL)
 endif
 
-
-all:
+all: ectf_prebuild_ap
 # 	Extend the functionality of the "all" recipe here
 	arm-none-eabi-size --format=berkeley $(BUILD_DIR)/$(PROJECT).elf
 
@@ -437,3 +436,6 @@ clean:
 
 # The rule to clean out all the build products.
 distclean: clean libclean
+
+ectf_prebuild_ap:
+	poetry run ectf_prebuild_ap # runs registered build.py script
