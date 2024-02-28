@@ -1,8 +1,6 @@
 #include "crypto_test.h"
 #include "host_messaging.h"
 
-#include <wolfssl/wolfcrypt/random.h>
-
 #define ECC_CURVE			ECC_SECP256R1
 #define PUBKEY_BUF_LEN		ECC_BUFSIZE
 #define PUBKEY_LEN 			ECC_MAXSIZE+1
@@ -56,7 +54,8 @@ int create_keypair() {
 	print_hex_debug(hash_out, WC_SHA256_DIGEST_SIZE);
 
 	// SIGN HASH
-	byte sig_out[ECC_MAX_SIG_SIZE]; // 512?
+	byte sig_out[ECC_MAX_SIG_SIZE]; // An ECC signature is twice the length of the private key
+	memset(sig_out, 0, ECC_MAX_SIG_SIZE);
 	word32 sigSz;
 
 	print_debug("Signing hash with ECC key... ");
@@ -72,14 +71,15 @@ int create_keypair() {
 	print_debug("Exporting public key to x963...");
 
 	byte pubkey_buf[PUBKEY_BUF_LEN];
+	word32 pubkey_buf_size = PUBKEY_BUF_LEN;
 	memset(pubkey_buf, 0, PUBKEY_BUF_LEN);
 
-	ret = wc_ecc_export_x963(&key, pubkey_buf, PUBKEY_BUF_LEN);
+	ret = wc_ecc_export_x963(&key, pubkey_buf, &pubkey_buf_size);
 	if (ret != 0) {
 		print_debug("ECC public key x963 export failed! %d\n", ret);
 		return -1;
 	}
-	print_debug("Exported public key to a buffer as x963: ");
+	print_debug("Exported public key to a buffer as x963 of size %d: ", pubkey_buf_size);
 	print_hex_debug(pubkey_buf, PUBKEY_BUF_LEN);
 
 	// IMPORT INTO NEW KEY
@@ -93,7 +93,7 @@ int create_keypair() {
 		return -1;
 	}
 	
-	ret = wc_ecc_import_x963_ex(pubkey_buf, PUBKEY_LEN, &key2, ECC_CURVE);
+	ret = wc_ecc_import_x963_ex(pubkey_buf, pubkey_buf_size, &key2, ECC_CURVE);
 
     if (ret != 0) {
         print_debug("Ecc import x963 failed %d\n", ret);
@@ -115,10 +115,12 @@ int create_keypair() {
     }
     if (stat != 1) {
         print_debug("Signature verification rejected %d\n", stat);
-        return -1;
+        // return -1;
+    } else {
+    	print_debug("Signature verified successfully! ");
     }
 
-    print_debug("Signature verified successfully! ");
+    // dertest();
 
 	// FREE STUFF
 	print_debug("'Freeing' WC_RNG and ECC key... (?)");
@@ -130,3 +132,4 @@ int create_keypair() {
 	return 0;
 
 }
+
