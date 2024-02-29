@@ -11,7 +11,7 @@ all: host_secrets
 	echo "#define SECRET 1234" > global_secrets.h
 
 host_secrets:
-	poetry run ectf_gen_host_secrets
+	poetry run python gen_host_secrets.py
 
 clean:
 	rm -f global_secrets.h

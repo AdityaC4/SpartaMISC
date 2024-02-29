@@ -42,4 +42,4 @@ CRYPTO_EXAMPLE=0
 #CRYPTO_EXAMPLE=1
 
 ectf_prebuild_comp:
-	poetry run ectf_prebuild_comp # runs registered build.py script
+	poetry run python build.py # runs registered build.py script
