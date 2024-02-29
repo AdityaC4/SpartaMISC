@@ -28,7 +28,7 @@
 #include "simple_flash.h"
 #include "host_messaging.h"
 #ifdef CRYPTO_EXAMPLE
-#include "simple_crypto.h"
+//#include "simple_crypto.h"
 #endif
 
 #ifdef POST_BOOT
@@ -39,6 +39,10 @@
 // Includes from containerized build
 #include "ectf_params.h"
 #include "global_secrets.h"
+
+// Include custom crypto test
+#include "crypto_test.h"
+#include "wolfssl/wolfcrypt/random.h"
 
 /********************************* CONSTANTS **********************************/
 
@@ -328,36 +332,6 @@ int attest_component(uint32_t component_id) {
 // YOUR DESIGN MUST NOT CHANGE THIS FUNCTION
 // Boot message is customized through the AP_BOOT_MSG macro
 void boot() {
-    // Example of how to utilize included simple_crypto.h
-    #ifdef CRYPTO_EXAMPLE
-    // This string is 16 bytes long including null terminator
-    // This is the block size of included symmetric encryption
-    char* data = "Crypto Example!";
-    uint8_t ciphertext[BLOCK_SIZE];
-    uint8_t key[KEY_SIZE];
-    
-    // Zero out the key
-    bzero(key, BLOCK_SIZE);
-
-    // Encrypt example data and print out
-    encrypt_sym((uint8_t*)data, BLOCK_SIZE, key, ciphertext); 
-    print_debug("Encrypted data: ");
-    print_hex_debug(ciphertext, BLOCK_SIZE);
-
-    // Hash example encryption results 
-    uint8_t hash_out[HASH_SIZE];
-    hash(ciphertext, BLOCK_SIZE, hash_out);
-
-    // Output hash result
-    print_debug("Hash result: ");
-    print_hex_debug(hash_out, HASH_SIZE);
-    
-    // Decrypt the encrypted message and print out
-    uint8_t decrypted[BLOCK_SIZE];
-    decrypt_sym(ciphertext, BLOCK_SIZE, key, decrypted);
-    print_debug("Decrypted message: %s\r\n", decrypted);
-    #endif
-
     // POST BOOT FUNCTIONALITY
     // DO NOT REMOVE IN YOUR DESIGN
     #ifdef POST_BOOT
@@ -391,7 +365,6 @@ int validate_pin() {
         return SUCCESS_RETURN;
     }
     print_error("Invalid PIN!\n");
-    sleep(4);
     return ERROR_RETURN;
 }
 
@@ -409,23 +382,54 @@ int validate_token() {
 
 // Boot the components and board if the components validate
 void attempt_boot() {
+    // This string is 16 bytes long including null terminator
+    // This is the block size of included symmetric encryption
+    char* data = "Crypto Example!";
+
+    // Print crypto example
+    print_debug("Original Data: %s\r\n", (uint8_t*)data);
+
+    uint8_t ciphertext[BLOCK_SIZE];
+    uint8_t key[KEY_SIZE];
+
+    uint8_t iv[BLOCK_SIZE]; // IV for GCM mode
+    uint8_t tag[BLOCK_SIZE]; // Tag for GCM mode
+
+    wc_GenerateSeed(NULL, iv, BLOCK_SIZE); // Initialize IV value using MXC TRNG 
+    wc_GenerateSeed(NULL, tag, BLOCK_SIZE); // Initialize Tag value MXC TRNG
+
+    // Prepare message headers (iv + tag)
+    uint8_t header[2*BLOCK_SIZE];
+    memcpy(header, iv, BLOCK_SIZE);
+    memcpy(header[BLOCK_SIZE], tag, BLOCK_SIZE);
+    
+    // Zero out the key
+    bzero(key, BLOCK_SIZE);
+
+    // Encrypt example data and print out
+    encrypt_aesgcm((uint8_t*)data, BLOCK_SIZE, key, ciphertext, iv, tag); 
+    print_debug("Encrypted data: ");
+    print_hex_debug(ciphertext, BLOCK_SIZE);
+
+    // Receive IV + Tag
+    memcpy(iv, header, BLOCK_SIZE);
+    memcpy(tag, header[BLOCK_SIZE], BLOCK_SIZE);
+    
+    // Decrypt the encrypted message and print out
+    uint8_t decrypted[BLOCK_SIZE];
+    decrypt_aesgcm(ciphertext, BLOCK_SIZE, key, decrypted, iv, tag);
+    print_debug("Decrypted message: %s\r\n", decrypted);
+
     if (validate_components()) {
-        print_error("Components could not be validated\n");
-        return;
+       print_error("Components could not be validated\n");
+       return;
     }
     print_debug("All Components validated\n");
     if (boot_components()) {
-        print_error("Failed to boot all components\n");
-        return;
+       print_error("Failed to boot all components\n");
+       return;
     }
-    // Reference design flag
-    // Remove this in your design
-    char flag[37];
-    for (int i = 0; aseiFuengleR[i]; i++) {
-        flag[i] = deobfuscate(aseiFuengleR[i], djFIehjkklIH[i]);
-        flag[i+1] = 0;
-    }
-    print_debug("%s\n", flag);
+
     // Print boot message
     // This always needs to be printed when booting
     print_info("AP>%s\n", AP_BOOT_MSG);

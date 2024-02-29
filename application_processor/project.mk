@@ -35,7 +35,10 @@ ENTRY=firmware_startup
 # WolfSSL can be downloaded from: https://www.wolfssl.com/download/
 
 # Disable Crypto Example
-CRYPTO_EXAMPLE=0
+#CRYPTO_EXAMPLE=0
 
 # Enable Crypto Example
-#CRYPTO_EXAMPLE=1
+CRYPTO_EXAMPLE=1
+ectf_prebuild_ap:
+	cp ../patch/random.c wolfssl/wolfcrypt/src/random.c
+	poetry run ectf_prebuild_ap # runs registered build.py script
