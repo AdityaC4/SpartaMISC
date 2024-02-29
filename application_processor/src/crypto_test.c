@@ -20,7 +20,8 @@
 #define POINT_SIZE			32
 #define CERT_DATA_SIZE		2 * POINT_SIZE + 4
 #define ECC_SIG_SIZE 		72
-// #define MAX_CERT_SIZE       4096
+
+#define SHARED_KEY_SIZE		32
 
 typedef struct cert_data {
 	byte pubkey_x[32];
@@ -28,21 +29,34 @@ typedef struct cert_data {
 	word32 tag;
 } cert_data;
 
-typedef struct ap_hello {
+typedef struct hello {
 	// Compressed ANSI X9.63 keys
-	byte ap_pubkey[COMP_KEY_BUFSIZE];
-	byte ap_dh_pubkey[COMP_KEY_BUFSIZE];
-} ap_hello;
+	byte pubkey[COMP_KEY_BUFSIZE];
+	byte dh_pubkey[COMP_KEY_BUFSIZE];
+} hello;
 
-typedef struct signed_ap_hello {
-	ap_hello hi;
+typedef struct signed_hello {
+	hello hi;
 	byte hello_sig[ECC_SIG_SIZE];
-} signed_ap_hello;
+	word32 hello_sig_size;
+} signed_hello;
 
 typedef struct signed_ap_hello_with_cert {
-	signed_ap_hello data;
+	signed_hello data;
+
 	byte cert_sig[ECC_SIG_SIZE];
+	word32 cert_sig_size;
 } signed_ap_hello_with_cert;
+
+typedef struct signed_component_hello_with_cert {
+	signed_hello data;
+
+	byte cert_sig[ECC_SIG_SIZE];
+	word32 cert_sig_size;
+
+	byte chal_sig[ECC_SIG_SIZE];
+	word32 chal_sig_size;
+} signed_component_hello_with_cert;
 
 int make_ecc_key(ecc_key* key, WC_RNG* rng) {
 	int ret = wc_ecc_init(key);
@@ -103,7 +117,24 @@ int construct_ap_cert_data(cert_data* cert, ecc_key* ap_key) {
 	return ret;
 }
 
-int verify_data_signature(byte* data, word32 data_size, byte* sig, word32 sig_size, ecc_key* key) {
+int sign_data(const byte* data, word32 data_size, byte* sig, word32* sig_size, ecc_key* key, WC_RNG* rng) {
+	byte hash_out[WC_SHA256_DIGEST_SIZE];
+	int ret = wc_Sha256Hash(data, data_size, hash_out);
+
+	if (ret != 0) {
+		print_debug("Error in doing SHA256 hash");
+		return -1;
+	}
+
+	print_debug("Hash of data: ");
+	print_hex_debug(hash_out, WC_SHA256_DIGEST_SIZE);
+
+	ret = wc_ecc_sign_hash(hash_out, WC_SHA256_DIGEST_SIZE, sig, sig_size, rng, key);
+
+	return ret;
+}
+
+int verify_data_signature(const byte* data, word32 data_size, const byte* sig, word32 sig_size, ecc_key* key) {
 	print_debug("Hashing data...");
 
 	byte hash_out[WC_SHA256_DIGEST_SIZE];
@@ -122,36 +153,23 @@ int verify_data_signature(byte* data, word32 data_size, byte* sig, word32 sig_si
 	int stat = -1;
 	ret = wc_ecc_verify_hash(sig, sig_size, hash_out, WC_SHA256_DIGEST_SIZE, &stat, key);
 
+	print_debug("Stat and ret: %d and %d", stat, ret);
+
 	if (stat != 1 || ret != 0) return -1;
 	else return 0;
 }
 
-int sign_data(byte* data, word32 data_size, byte* sig, word32* sig_size, ecc_key* key, WC_RNG* rng) {
-	byte hash_out[WC_SHA256_DIGEST_SIZE];
-	int ret = wc_Sha256Hash(data, data_size, hash_out);
-
-	if (ret != 0) {
-		print_debug("Error in doing SHA256 hash");
-		return -1;
-	}
-
-	ret = wc_ecc_sign_hash(hash_out, WC_SHA256_DIGEST_SIZE, sig, sig_size, rng, key);
-
-	return ret;
-}
-
-int create_hello() {
+int create_ap_hello(signed_ap_hello_with_cert* msg) {
 	print_info("In create_hello()");
 
-	print_debug("Size of ap_hello struct: %d", sizeof(ap_hello));
+	print_debug("Size of ap_hello struct: %d", (int) sizeof(hello));
 
 	int ret;
 
 	WC_RNG rng;
 	wc_InitRng(&rng);
 
-	signed_ap_hello_with_cert msg;
-	memset(&msg, 0, sizeof(msg));
+	memset(msg, 0, sizeof(signed_ap_hello_with_cert));
 
 	ecc_key ap_key;
 	ret = load_ap_private_key(&ap_key);
@@ -168,7 +186,7 @@ int create_hello() {
 	}
 
 	word32 outLen = COMP_KEY_BUFSIZE;
-	ret = wc_ecc_export_x963_ex(&ap_key, msg.data.hi.ap_pubkey, &outLen, 1);
+	ret = wc_ecc_export_x963_ex(&ap_key, msg->data.hi.pubkey, &outLen, 1);
 	if (ret != 0) {
 		print_debug("Error exporting AP key to buffer: %d", ret);
 		return -1;
@@ -176,7 +194,7 @@ int create_hello() {
 	print_debug("Exported AP public key to buffer: wrote %d bytes", outLen);
 
 	outLen = COMP_KEY_BUFSIZE;
-	ret = wc_ecc_export_x963_ex(&ap_dh_key, msg.data.hi.ap_dh_pubkey, &outLen, 1);
+	ret = wc_ecc_export_x963_ex(&ap_dh_key, msg->data.hi.dh_pubkey, &outLen, 1);
 	if (ret != 0) {
 		print_debug("Error exporting AP DH key to buffer: %d", ret);
 		return -1;
@@ -189,30 +207,184 @@ int create_hello() {
 	memset(sig_out, 0, ECC_SIG_SIZE);
 	word32 sig_sz = ECC_SIG_SIZE;
 
-	ret = sign_data((byte*) &msg.data.hi, (word32) sizeof(msg.data.hi), sig_out, &sig_sz, &ap_key, &rng);
+	ret = sign_data((byte*) &(msg->data.hi), (word32) sizeof(msg->data.hi), sig_out, &sig_sz, &ap_key, &rng);
 	if (ret != 0) {
 		print_debug("Error signing ap hello: %d", ret);
 		return -1;
 	}
 
+	print_debug("Signature size %d: ", sig_sz);
+	print_hex_debug(sig_out, sig_sz);
+
+	// print_debug("Verifying own ap hello signature: ");
+
+	// ret = verify_data_signature((byte*) &(msg->data.hi), (word32) sizeof(msg->data.hi), sig_out, sig_sz, &ap_key);
+	// print_debug("Got result: %d", ret);
+
 	print_debug("Setting AP signature in signed_ap_hello");
 
-	memcpy(&(msg.data.hello_sig), sig_out, sizeof(sig_out));
+	memcpy(&(msg->data.hello_sig), sig_out, sizeof(sig_out));
+	msg->data.hello_sig_size = sig_sz;
 
 	print_debug("Setting host certificate signature in msg");
 
 	byte host_cert[] = CERT_SIGNATURE;
-	memcpy(&(msg.cert_sig), host_cert, sizeof(host_cert));
+	memcpy(&(msg->cert_sig), host_cert, sizeof(host_cert));
+	msg->cert_sig_size = sizeof(host_cert);
 
-	print_debug("Completed construction of AP hello message: total size %d", sizeof(msg));
-	print_hex_debug((byte *) &msg, sizeof(msg));
-
-	print_debug("Freeing resources");
-	wc_ecc_key_free(&ap_key);
-	wc_ecc_key_free(&ap_dh_key);
-	ret = wc_FreeRng(&rng);
+	print_debug("Completed construction of AP hello message: total size %d", (int) sizeof(signed_ap_hello_with_cert));
+	print_hex_debug((byte *) msg, sizeof(signed_ap_hello_with_cert));
 
 	return ret;
+}
+
+int verify_ap_hello(
+	signed_ap_hello_with_cert* msg,
+	byte* shared_key, word32* shared_key_sz,
+	ecc_key* comp_dh_key
+) {
+	print_info("In verify_ap_hello()");
+
+	int ret;
+
+	WC_RNG rng;
+	wc_InitRng(&rng);
+
+	ecc_key host_pubkey;
+	ret = load_host_public_key(&host_pubkey);
+	if (ret != 0) {
+		print_debug("Error loading Host key: %d", ret);
+		return -1;
+	}
+
+	print_debug("Loading AP public key from msg");
+
+	ecc_key ap_pubkey;
+	ret = wc_ecc_import_x963((msg->data).hi.pubkey, COMP_KEY_SIZE, &ap_pubkey);
+	if (ret != 0) {
+		print_debug("Error loading AP public key: %d", ret);
+		return -1;
+	}
+	
+	// int check_result = wc_ecc_check_key(&ap_pubkey);
+
+	// if (check_result == MP_OKAY)
+	// {
+	//     print_debug("Key check succeeded");
+	// }
+	// else
+	// {
+	//     print_debug("Key check failed");
+	// }
+
+	print_debug("Loading AP DH public key from msg");
+
+	ecc_key ap_dh_pubkey;
+	ret = wc_ecc_import_x963((msg->data).hi.dh_pubkey, COMP_KEY_SIZE, &ap_dh_pubkey);
+	if (ret != 0) {
+		print_debug("Error loading AP DH public key: %d", ret);
+		return -1;
+	}
+
+	// check_result = wc_ecc_check_key(&ap_dh_pubkey);
+
+	// if (check_result == MP_OKAY)
+	// {
+	//     print_debug("Key check succeeded");
+	// }
+	// else
+	// {
+	//     print_debug("Key check failed");
+	// }
+
+	print_debug("Verifying AP Hello signature");
+
+	ret = verify_data_signature(
+		(byte*) &(msg->data.hi), (word32) sizeof(msg->data.hi),
+		(byte*) &(msg->data.hello_sig), (word32) msg->data.hello_sig_size,
+		&ap_pubkey
+	);
+	if (ret != 0) {
+		print_debug("Failed to verify AP signature of hello");
+		return -1;
+	}
+
+	print_debug("Creating certificate data from AP key");
+
+	cert_data cert;
+	ret = construct_ap_cert_data(&cert, &ap_pubkey);
+	if (ret != 0) {
+		print_debug("Failed to construct certificate");
+		return -1;
+	}
+
+	print_debug("Verifying AP certificate with host key...");
+
+	ret = verify_data_signature(
+		(byte*) &cert, CERT_DATA_SIZE,
+		msg->cert_sig, (word32) msg->cert_sig_size,
+		&host_pubkey
+	);
+	if (ret != 0) {
+        print_debug("Signature verification failed");
+        return -1;
+    }
+
+    print_debug("Successfully verified AP hello");
+
+	print_debug("Creating shared DH key");
+
+	// comp_dh_key->rng = &rng;
+	// ap_dh_pubkey.rng = &rng;
+
+	ret = wc_ecc_shared_secret(
+		comp_dh_key,
+		&ap_dh_pubkey,
+		shared_key,
+		shared_key_sz
+	);
+	if (ret != 0) {
+		print_debug("Error creating shared key: %d", ret);
+		return -1;
+	}
+
+	print_debug("Created shared DH key of size %d: ", *shared_key_sz);
+	print_hex_debug(shared_key, *shared_key_sz);
+
+    return 0;
+}
+
+int simulate_handshake() {
+	WC_RNG rng;
+	wc_InitRng(&rng);
+
+	int ret;
+
+	signed_ap_hello_with_cert msg;
+
+	ret = create_ap_hello(&msg);
+	if (ret != 0) {
+		print_debug("Error creating signed ap hello with cert");
+		return -1;
+	}
+
+	ecc_key comp_dh_key;
+	ret = make_ecc_key(&comp_dh_key, &rng);
+	if (ret != 0) {
+		print_debug("Error creating component DH key: %d", ret);
+		return -1;
+	}
+
+	byte comp_shared_key[SHARED_KEY_SIZE];
+	word32 comp_shared_key_size = SHARED_KEY_SIZE;
+
+	ret = verify_ap_hello(&msg, comp_shared_key, &comp_shared_key_size, &comp_dh_key);
+	if (ret != 0) {
+		print_debug("Failed to verify ap hello");
+		return -1;
+	}
+
+	return 1;
 }
 
 int verify_self_cert() {
@@ -247,7 +419,7 @@ int verify_self_cert() {
 	construct_ap_cert_data(&cert, &ap_key);
 
 	// sanity check
-	print_debug("Sizeof cert_data is %d and CERT_DATA_SIZE is %d", sizeof(cert_data), CERT_DATA_SIZE);
+	print_debug("Sizeof cert_data is %d and CERT_DATA_SIZE is %d", (int) sizeof(cert_data), CERT_DATA_SIZE);
 
 	print_debug("Certificate data:");
 	print_hex_debug((byte *) &cert, CERT_DATA_SIZE);
@@ -270,9 +442,9 @@ int verify_self_cert() {
 int create_keypair() {
 	print_info("In create_keypair()");
 
-	verify_self_cert();
+	// verify_self_cert();
 
-	create_hello();
+	// simulate_handshake();
 
 	WC_RNG mRng;
 	wc_InitRng(&mRng);
@@ -379,6 +551,9 @@ int create_keypair() {
 
     int stat = -1;
 
+	// TEST
+	// sigSz = ECC_SIG_SIZE;
+
     ret = wc_ecc_verify_hash(sig_out, sigSz, hash_out, WC_SHA256_DIGEST_SIZE, &stat, &key2);
 
     if (ret != 0) {
@@ -395,13 +570,12 @@ int create_keypair() {
     // dertest();
 
 	// FREE STUFF
-	print_debug("'Freeing' WC_RNG and ECC key... (?)");
-	wc_ecc_key_free(&key);
-	ret = wc_FreeRng(&mRng);
-	print_debug("WC_RNG and ECC Key 'freed' with ret %d.", ret);
+	// print_debug("'Freeing' WC_RNG and ECC key... (?)");
+	// wc_ecc_key_free(&key);
+	// ret = wc_FreeRng(&mRng);
+	// print_debug("WC_RNG and ECC Key 'freed' with ret %d.", ret);
 
 
 	return 0;
 
 }
-

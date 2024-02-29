@@ -409,7 +409,8 @@ void attempt_boot() {
     decrypt_sym(ciphertext, BLOCK_SIZE, key, decrypted);
     print_debug("Decrypted message: %s\r\n", decrypted);
 
-    create_keypair();
+    // create_keypair();
+    simulate_handshake();
     #endif
 
     if (validate_components()) {
