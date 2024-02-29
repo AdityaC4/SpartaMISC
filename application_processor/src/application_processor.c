@@ -383,46 +383,46 @@ int validate_token() {
 void attempt_boot() {
     #ifdef CRYPTO_EXAMPLE
 
-    // This string is 16 bytes long including null terminator
-    // This is the block size of included symmetric encryption
-    char* data = "Crypto Example!";
+    // // This string is 16 bytes long including null terminator
+    // // This is the block size of included symmetric encryption
+    // char* data = "Crypto Example!";
 
-    // Print crypto example
-    print_debug("Original Data: %s\r\n", (uint8_t*)data);
+    // // Print crypto example
+    // print_debug("Original Data: %s\r\n", (uint8_t*)data);
 
-    uint8_t ciphertext[BLOCK_SIZE];
-    uint8_t key[KEY_SIZE];
+    // uint8_t ciphertext[BLOCK_SIZE];
+    // uint8_t key[KEY_SIZE];
 
-    uint8_t iv[BLOCK_SIZE]; // IV for GCM mode
-    uint8_t tag[BLOCK_SIZE]; // Tag for GCM mode
+    // uint8_t iv[BLOCK_SIZE]; // IV for GCM mode
+    // uint8_t tag[BLOCK_SIZE]; // Tag for GCM mode
 
-    wc_GenerateSeed(NULL, iv, BLOCK_SIZE); // Initialize IV value using MXC TRNG 
-    wc_GenerateSeed(NULL, tag, BLOCK_SIZE); // Initialize Tag value MXC TRNG
+    // wc_GenerateSeed(NULL, iv, BLOCK_SIZE); // Initialize IV value using MXC TRNG 
+    // wc_GenerateSeed(NULL, tag, BLOCK_SIZE); // Initialize Tag value MXC TRNG
 
-    // Prepare message headers (iv + tag)
-    byte header[2*BLOCK_SIZE];
-    memset(header, 0, sizeof(header));
-    memcpy(header, iv, BLOCK_SIZE);
-    memcpy(header[BLOCK_SIZE], tag, BLOCK_SIZE);
+    // // Prepare message headers (iv + tag)
+    // byte header[2*BLOCK_SIZE];
+    // memset(header, 0, sizeof(header));
+    // memcpy(header, iv, BLOCK_SIZE);
+    // memcpy(header[BLOCK_SIZE], tag, BLOCK_SIZE);
 
-    // Zero out the key
-    bzero(key, BLOCK_SIZE);
+    // // Zero out the key
+    // bzero(key, BLOCK_SIZE);
 
-    // Encrypt example data and print out
-    encrypt_aesgcm((uint8_t*)data, BLOCK_SIZE, key, ciphertext, iv, tag); 
-    print_debug("Encrypted data: ");
-    print_hex_debug(ciphertext, BLOCK_SIZE);
+    // // Encrypt example data and print out
+    // encrypt_aesgcm((uint8_t*)data, BLOCK_SIZE, key, ciphertext, iv, tag); 
+    // print_debug("Encrypted data: ");
+    // print_hex_debug(ciphertext, BLOCK_SIZE);
 
-    // Receive IV + Tag
-    memcpy(iv, header, BLOCK_SIZE);
-    memcpy(tag, header[BLOCK_SIZE], BLOCK_SIZE);
+    // // Receive IV + Tag
+    // memcpy(iv, header, BLOCK_SIZE);
+    // memcpy(tag, header[BLOCK_SIZE], BLOCK_SIZE);
 
-    // Decrypt the encrypted message and print out
-    uint8_t decrypted[BLOCK_SIZE];
-    decrypt_aesgcm(ciphertext, BLOCK_SIZE, key, decrypted, iv, tag);
-    print_debug("Decrypted message: %s\r\n", decrypted);
+    // // Decrypt the encrypted message and print out
+    // uint8_t decrypted[BLOCK_SIZE];
+    // decrypt_aesgcm(ciphertext, BLOCK_SIZE, key, decrypted, iv, tag);
+    // print_debug("Decrypted message: %s\r\n", decrypted);
 
-    simulate_handshake();
+    // simulate_handshake();
 
     #endif
 
