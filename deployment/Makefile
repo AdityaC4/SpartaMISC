@@ -11,6 +11,7 @@ all: host_secrets
 	echo "#define SECRET 1234" > global_secrets.h
 
 host_secrets:
+	poetry install
 	poetry run python gen_host_secrets.py
 
 clean:
