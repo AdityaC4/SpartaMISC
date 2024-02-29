@@ -1,0 +1,3 @@
+[submodule "application_processor/wolfssl"]
+	path = application_processor/wolfssl
+	url = https://github.com/wolfSSL/wolfssl
