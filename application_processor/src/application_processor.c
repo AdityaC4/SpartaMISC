@@ -390,7 +390,7 @@ int validate_pin() {
     MXC_Delay(sleeptime);
     char buf[50];
     recv_input("Enter pin: ", buf);
-    if (!strcmp(buf, AP_PIN)) {
+    if (!strncmp(buf, AP_PIN, strlen(AP_PIN))) {
         print_debug("Pin Accepted!\n");
         return SUCCESS_RETURN;
     }
@@ -402,7 +402,7 @@ int validate_pin() {
 int validate_token() {
     char buf[50];
     recv_input("Enter token: ", buf);
-    if (!strcmp(buf, AP_TOKEN)) {
+    if (!strncmp(buf, AP_TOKEN, strlen(AP_TOKEN))) {
         print_debug("Token Accepted!\n");
         return SUCCESS_RETURN;
     }
@@ -505,13 +505,13 @@ int main() {
         recv_input("Enter Command: ", buf);
 
         // Execute requested command
-        if (!strcmp(buf, "list")) {
+        if (!strncmp(buf, "list", 4)) {
             scan_components();
-        } else if (!strcmp(buf, "boot")) {
+        } else if (!strncmp(buf, "boot", 4)) {
             attempt_boot();
-        } else if (!strcmp(buf, "replace")) {
+        } else if (!strncmp(buf, "replace", 7)) {
             attempt_replace();
-        } else if (!strcmp(buf, "attest")) {
+        } else if (!strncmp(buf, "attest", 6)) {
             attempt_attest();
         } else {
             print_error("Unrecognized command '%s'\n", buf);

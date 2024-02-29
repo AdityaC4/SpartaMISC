@@ -197,7 +197,7 @@ void process_validate() {
 
 void process_attest() {
     // The AP requested attestation. Respond with the attestation data
-    uint8_t len = sprintf((char*)transmit_buffer, "LOC>%s\nDATE>%s\nCUST>%s\n",
+    uint8_t len = snprintf((char*)transmit_buffer, strlen(transmit_buffer), "LOC>%s\nDATE>%s\nCUST>%s\n",
                 ATTESTATION_LOC, ATTESTATION_DATE, ATTESTATION_CUSTOMER) + 1;
     send_packet_and_ack(len, transmit_buffer);
 }
