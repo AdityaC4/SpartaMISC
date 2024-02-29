@@ -1,6 +1,8 @@
 # eCTF Insecure Example
 This repository holds the insecure example design for an eCTF MISC system.
 
+## Notes
+Currently the project does not make use of `user_settings.h`. If you want to use it make sure `WOLFSSL_USER_SETTINGS` is defined for `PROJ_CFLAGS` in the Makefile to utilize it instead of command line flags.  
 
 ## Layout
 

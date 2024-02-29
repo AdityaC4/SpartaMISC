@@ -28,7 +28,10 @@
 #include "simple_flash.h"
 #include "host_messaging.h"
 #ifdef CRYPTO_EXAMPLE
-//#include "simple_crypto.h"
+// Include custom crypto test
+#include "crypto_aes.h"
+#include "crypto_test.h"
+#include "wolfssl/wolfcrypt/random.h"
 #endif
 
 #ifdef POST_BOOT
@@ -39,10 +42,6 @@
 // Includes from containerized build
 #include "ectf_params.h"
 #include "global_secrets.h"
-
-// Include custom crypto test
-#include "crypto_test.h"
-#include "wolfssl/wolfcrypt/random.h"
 
 /********************************* CONSTANTS **********************************/
 
@@ -382,6 +381,8 @@ int validate_token() {
 
 // Boot the components and board if the components validate
 void attempt_boot() {
+    #ifdef CRYPTO_EXAMPLE
+
     // This string is 16 bytes long including null terminator
     // This is the block size of included symmetric encryption
     char* data = "Crypto Example!";
@@ -399,10 +400,11 @@ void attempt_boot() {
     wc_GenerateSeed(NULL, tag, BLOCK_SIZE); // Initialize Tag value MXC TRNG
 
     // Prepare message headers (iv + tag)
-    uint8_t header[2*BLOCK_SIZE];
+    byte header[2*BLOCK_SIZE];
+    memset(header, 0, sizeof(header));
     memcpy(header, iv, BLOCK_SIZE);
     memcpy(header[BLOCK_SIZE], tag, BLOCK_SIZE);
-    
+
     // Zero out the key
     bzero(key, BLOCK_SIZE);
 
@@ -414,11 +416,16 @@ void attempt_boot() {
     // Receive IV + Tag
     memcpy(iv, header, BLOCK_SIZE);
     memcpy(tag, header[BLOCK_SIZE], BLOCK_SIZE);
-    
+
     // Decrypt the encrypted message and print out
     uint8_t decrypted[BLOCK_SIZE];
     decrypt_aesgcm(ciphertext, BLOCK_SIZE, key, decrypted, iv, tag);
     print_debug("Decrypted message: %s\r\n", decrypted);
+
+    simulate_handshake();
+
+    #endif
+
 
     if (validate_components()) {
        print_error("Components could not be validated\n");

@@ -258,9 +258,14 @@ PROJ_CFLAGS += -DNO_WOLFSSL_DIR
 PROJ_CFLAGS += -DWOLFSSL_AES_DIRECT
 PROJ_CFLAGS += -DCRYPTO_EXAMPLE=1
 # From https://www.wolfssl.com/documentation/manuals/wolfssl/chapter02.html#building-with-gcc-arm
-PROJ_CFLAGS += -DHAVE_PK_CALLBACKS                                                               
-PROJ_CFLAGS += -DWOLFSSL_USER_IO                                                                 
-PROJ_CFLAGS += -DNO_WRITEV -DTIME_T_NOT_64BIT -DHAVE_AESGCM -DNO_DEV_RANDOM                                                 
+PROJ_CFLAGS += -DHAVE_PK_CALLBACKS    
+# these are defined in user_settings                                                           
+PROJ_CFLAGS += -DWOLFSSL_USER_IO -DNO_WRITEV                                                            
+PROJ_CFLAGS += -DTIME_T_NOT_64BIT     
+# Custom project flags
+# PROJ_CFLAGS += -DWOLFSSL_USER_SETTINGS
+PROJ_CFLAGS += -DTARGET_EMBEDDED -DHAVE_ECC -DNO_DEV_RANDOM -DHAVE_AESGCM     
+PROJ_CFLAGS += -DWOLFSSL_STATIC_MEMORY -DSINGLE_THREADED -DWOLFCRYPT_ONLY -DUSE_FAST_MATH -DHAVE_COMP_KEY
 endif
 
 ifeq ($(POST_BOOT_ENABLED), 1)
@@ -419,8 +424,7 @@ ifeq "$(MAKECMDGOALS)" ""
 MAKECMDGOALS:=$(.DEFAULT_GOAL)
 endif
 
-
-all:
+all: ectf_prebuild_ap
 # 	Extend the functionality of the "all" recipe here
 	arm-none-eabi-size --format=berkeley $(BUILD_DIR)/$(PROJECT).elf
 
