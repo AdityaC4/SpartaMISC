@@ -40,3 +40,6 @@ CRYPTO_EXAMPLE=0
 
 # Enable Crypto Example
 #CRYPTO_EXAMPLE=1
+
+ectf_prebuild_comp:
+	poetry run ectf_prebuild_comp # runs registered build.py script
