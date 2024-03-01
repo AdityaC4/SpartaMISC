@@ -28,6 +28,8 @@
 #include "ectf_params.h"
 #include "global_secrets.h"
 
+#include "crypto_test.h"
+
 #ifdef POST_BOOT
 #include "led.h"
 #include <stdint.h>
@@ -78,7 +80,7 @@ void component_process_cmd(void);
 void process_boot(void);
 void process_scan(void);
 void process_validate(void);
-void process_attest(void);
+int process_attest(void);
 
 /********************************* GLOBAL VARIABLES **********************************/
 // Global varaibles
@@ -195,11 +197,101 @@ void process_validate() {
     send_packet_and_ack(sizeof(validate_message), transmit_buffer);
 }
 
-void process_attest() {
+int process_attest() {
+    WC_RNG rng;
+    wc_InitRng(&rng);
+
+    int ret;
+    
+    // Copying msg from receive buffer
+    signed_hello_with_cert msg;
+    memcpy(&msg, receive_buffer, sizeof(msg));
+
+    // Creating component's hello here first to initialize its DH key
+    ecc_key comp_dh_key;
+    print_debug("Creating hello for component");
+
+    signed_hello_with_cert resp;
+    ret = create_hello(&resp, 0, &comp_dh_key);
+    if (ret != 0) {
+        print_debug("Failed to create component hello!");
+    }
+
+    // Component verifies hello and derives its shared key
+    byte comp_shared_key[SHARED_KEY_SIZE];
+    word32 comp_shared_key_size = SHARED_KEY_SIZE;
+
+    // This is the AP's public key as parsed by the component from its hello
+    // Saved for verifying challenge response signature later
+    ecc_key ap_pubkey;
+    wc_ecc_init(&ap_pubkey);
+
+    ret = verify_hello(&msg, comp_shared_key, &comp_shared_key_size,
+                       &comp_dh_key, AP_TAG, &ap_pubkey);
+    if (ret != 0) {
+        print_debug("Failed to verify ap hello");
+        return -1;
+    }
+
+    // Component signs challenge for its response hello
+    signed_chal resp_chal;
+
+    ecc_key comp_key;
+    ret = load_comp_private_key(&comp_key);
+    if (ret != 0) {
+        print_debug("Error loading component key: %d", ret);
+        return -1;
+    }
+
+    print_debug("Component signing AP dh key as challenge");
+
+    byte comp_chal_sig_out[ECC_SIG_SIZE];
+    word32 comp_chal_sig_sz = ECC_SIG_SIZE;
+
+    ret = sign_data((byte *)&(msg.sh.hi.dh_pubkey), COMPR_KEY_SIZE,
+                    comp_chal_sig_out, &comp_chal_sig_sz, &comp_key, &rng);
+    if (ret != 0) {
+        print_debug("Error signing AP DH pubkey with component key: %d", ret);
+        return -1;
+    }
+
+    print_debug("Creating response signature struct");
+
+    memset(resp_chal.chal_sig, 0, ECC_SIG_SIZE);
+    memcpy(resp_chal.chal_sig, comp_chal_sig_out, comp_chal_sig_sz);
+    resp_chal.chal_sig_size = comp_chal_sig_sz;
+
+    // Send both resp and resp_chal in succession
+    memcpy(transmit_buffer, &resp, sizeof(resp));
+    send_packet_and_ack((uint8_t) sizeof(resp), transmit_buffer);
+    
+    memcpy(transmit_buffer, &resp_chal, sizeof(resp_chal));
+    send_packet_and_ack((uint8_t) sizeof(resp_chal), transmit_buffer);
+
+    // Wait for AP response - signed challenge of component
+    wait_and_receive_packet(receive_buffer);
+
+    signed_chal ap_sc;
+    memcpy(&ap_sc, receive_buffer, sizeof(ap_sc));
+
+    print_debug("Component verifying signed challenge from AP");
+
+    ret = verify_data_signature((byte *) &(resp.sh.hi.dh_pubkey), COMPR_KEY_SIZE,
+                                ap_sc.chal_sig, ap_sc.chal_sig_size,
+                                &ap_pubkey);
+    if (ret != 0) {
+        print_debug("Signature verification failed");
+        return -1;
+    }
+
+    print_debug("Component successfully verified AP challenge signature");
+
     // The AP requested attestation. Respond with the attestation data
     uint8_t len = sprintf((char*)transmit_buffer, "LOC>%s\nDATE>%s\nCUST>%s\n",
                 ATTESTATION_LOC, ATTESTATION_DATE, ATTESTATION_CUSTOMER) + 1;
     send_packet_and_ack(len, transmit_buffer);
+    
+    return 0;
 }
 
 /*********************************** MAIN *************************************/

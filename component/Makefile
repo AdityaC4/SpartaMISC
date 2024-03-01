@@ -262,7 +262,9 @@ PROJ_CFLAGS += -DCRYPTO_EXAMPLE=1
 # From https://www.wolfssl.com/documentation/manuals/wolfssl/chapter02.html#building-with-gcc-arm
 PROJ_CFLAGS += -DHAVE_PK_CALLBACKS                                                               
 PROJ_CFLAGS += -DWOLFSSL_USER_IO                                                                 
-PROJ_CFLAGS += -DNO_WRITEV -DTIME_T_NOT_64BIT                                                    
+PROJ_CFLAGS += -DNO_WRITEV -DTIME_T_NOT_64BIT       
+PROJ_CFLAGS += -DTARGET_EMBEDDED -DHAVE_ECC -DNO_DEV_RANDOM -DHAVE_AESGCM     
+PROJ_CFLAGS += -DWOLFSSL_STATIC_MEMORY -DSINGLE_THREADED -DWOLFCRYPT_ONLY -DUSE_FAST_MATH -DHAVE_COMP_KEY                                             
 endif
 PROJ_CFLAGS += -DMXC_ASSERT_ENABLE
 

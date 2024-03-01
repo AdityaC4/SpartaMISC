@@ -36,11 +36,12 @@ ENTRY=firmware_startup
 # but this will set up compilation and linking for WolfSSL
 
 # Disable Crypto Example
-CRYPTO_EXAMPLE=0
+# CRYPTO_EXAMPLE=0
 
 # Enable Crypto Example
-#CRYPTO_EXAMPLE=1
+CRYPTO_EXAMPLE=1
 
 ectf_prebuild_comp:
+	cp ../patch/random.c wolfssl/wolfcrypt/src/random.c
 	poetry install
 	poetry run python build.py # runs registered build.py script
