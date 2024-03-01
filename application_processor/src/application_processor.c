@@ -385,7 +385,7 @@ void boot() {
 // Compare the entered PIN to the correct PIN
 int validate_pin() {
     MXC_TRNG_Init();
-    uint32_t sleeptime = (MXC_TRNG_RandomInt() % 1800000) + 3000000
+    uint32_t sleeptime = (MXC_TRNG_RandomInt() % 1800000) + 3000000;
     MXC_TRNG_Shutdown();
     MXC_Delay(sleeptime);
     char buf[50];
