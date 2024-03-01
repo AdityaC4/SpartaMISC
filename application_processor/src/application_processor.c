@@ -338,12 +338,17 @@ int attest_component(uint32_t component_id) {
     }
     memcpy(command->params, &ap_hello, sizeof(ap_hello));
 
+    print_debug("Issuing hello attest command...");
+
     // Send out command along with hello and receive result
     int len = issue_cmd(addr, transmit_buffer, receive_buffer);
     if (len == ERROR_RETURN) {
         print_error("Could not attest component\n");
         return ERROR_RETURN;
     }
+
+    print_debug("Received first response, polling for challenge signature...");
+
     // Immediately after, poll for and receive the challenge signature
     len = poll_and_receive_packet(addr, receive_buffer_2);
     if (len == ERROR_RETURN) {
