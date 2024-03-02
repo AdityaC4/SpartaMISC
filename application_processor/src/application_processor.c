@@ -54,7 +54,6 @@
 
 // Flash Macros
 #define FLASH_ADDR ((MXC_FLASH_MEM_BASE + MXC_FLASH_MEM_SIZE) - (2 * MXC_FLASH_PAGE_SIZE))
-#define DELAY_FLASH_ADDR ((MXC_FLASH_MEM_BASE + MXC_FLASH_MEM_SIZE) - (3*MXC_FLASH_PAGE_SIZE))
 #define FLASH_MAGIC 0xDEADBEEF
 
 // Library call return types
@@ -88,9 +87,6 @@ typedef struct {
     uint32_t component_ids[32];
 } flash_entry;
 
-typedef struct {
-    uint32_t flash_magic;
-} smaller_flash_entry;
 
 // Datatype for commands sent to components
 typedef enum {
@@ -104,7 +100,6 @@ typedef enum {
 /********************************* GLOBAL VARIABLES **********************************/
 // Variable for information stored in flash memory
 flash_entry flash_status;
-smaller_flash_entry delay_status;
 
 /********************************* REFERENCE FLAG **********************************/
 // trust me, it's easier to get the boot reference flag by
@@ -185,7 +180,6 @@ void init() {
             COMPONENT_CNT*sizeof(uint32_t));
 
         flash_simple_write(FLASH_ADDR, (uint32_t*)&flash_status, sizeof(flash_entry));
-        flash_simple_erase_page(DELAY_FLASH_ADDR);
     }
     
     // Initialize board link interface
@@ -390,34 +384,11 @@ void boot() {
 
 // Compare the entered PIN to the correct PIN
 int validate_pin() {
-    
-    uint8_t isDelayed;
-    flash_simple_read(DELAY_FLASH_ADDR, (uint32_t*)&delay_status, sizeof(smaller_flash_entry));
-
-    if (delay_status.flash_magic != FLASH_MAGIC) {
-        isDelayed = 0;
-        delay_status.flash_magic = FLASH_MAGIC;
-    }
-
-    else {
-        isDelayed = 1;
-    }
-
-    flash_simple_erase_page(DELAY_FLASH_ADDR);
-    flash_simple_write(DELAY_FLASH_ADDR, (uint32_t*)&delay_status, sizeof(smaller_flash_entry));
-
-    if (isDelayed) {
-        MXC_TRNG_Init();
-        uint32_t sleeptime = (MXC_TRNG_RandomInt() % 1800000) + 3000000;
-        MXC_TRNG_Shutdown();
-        MXC_Delay(sleeptime);
-    }
 
     char buf[50];
     recv_input("Enter pin: ", buf);
 
     if (!strncmp(buf, AP_PIN, strlen(AP_PIN))) {
-        flash_simple_erase_page(DELAY_FLASH_ADDR);        
         print_debug("Pin Accepted!\n");
         return SUCCESS_RETURN;
     }
@@ -451,7 +422,7 @@ void attempt_boot() {
     }
     // Reference design flag
     // Remove this in your design
-
+ 
     // Print boot message
     // This always needs to be printed when booting
     print_info("AP>%s\n", AP_BOOT_MSG);
