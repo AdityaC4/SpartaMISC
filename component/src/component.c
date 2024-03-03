@@ -96,11 +96,11 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
  * This function must be implemented by your team to align with the security requirements.
 */
 void secure_send(uint8_t* buffer, uint8_t len) {
-    byte send_buf[MAX_I2C_MESSAGE_LEN];
+    unsigned char send_buf[255];
     bzero(send_buf, sizeof(send_buf));
     memcpy(send_buf, buffer, len);
     
-    send_packet_and_ack(MAX_I2C_MESSAGE_LEN, send_buf); 
+    send_packet_and_ack(255, send_buf); 
 }
 
 /**
