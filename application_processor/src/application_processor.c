@@ -207,9 +207,7 @@ int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
 
 /******************************** COMPONENT COMMS ********************************/
 
-int do_handshake(uint32_t component_id, uint8_t initial_command) {
-    return 0;
-    
+int do_handshake(uint32_t component_id, uint8_t initial_command) {    
     // Start handshake
     print_debug("Doing handshake");
 
@@ -245,6 +243,7 @@ int do_handshake(uint32_t component_id, uint8_t initial_command) {
         print_debug("Error creating signed ap hello with cert");
         return -1;
     }
+    memcpy(command->params, &ap_hello, sizeof(ap_hello));
 
     print_debug("Issuing hello attest command...");
 
@@ -452,7 +451,6 @@ int boot_components() {
 
 int attest_component(uint32_t component_id) {
     // Do handshake
-    print_debug("In attest_component");
     
     int ret = do_handshake(component_id, COMPONENT_CMD_ATTEST);
     if (ret != 0) {
