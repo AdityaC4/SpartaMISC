@@ -137,7 +137,7 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
 int secure_receive(i2c_addr_t address, uint8_t* buffer) {
     int ret = poll_and_receive_packet(address, buffer);
     if (ret < 0) return ret;
-    return MAX_I2X_MESSAGE_LEN;
+    return MAX_I2C_MESSAGE_LEN;
 }
 
 /**
