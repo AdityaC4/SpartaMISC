@@ -11,8 +11,6 @@
 #include "wolfssl/wolfcrypt/integer.h"
 #include "wolfssl/wolfcrypt/random.h"
 
-#define COMP_CERT_SIGNATURE CERT_SIGNATURE
-
 #define ECC_CURVE ECC_SECP256R1
 #define ECC_KEY_LEN 32
 
