@@ -120,7 +120,11 @@ typedef uint32_t aErjfkdfru;const aErjfkdfru aseiFuengleR[]={0x1ffe4b6,0x3098ac,
 
 */
 int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
-    return send_packet(address, len, buffer);
+    byte send_buf[MAX_I2C_MESSAGE_LEN];
+    bzero(send_buf, sizeof(send_buf));
+    memcpy(send_buf, buffer, len);
+
+    return send_packet(address, MAX_I2C_MESSAGE_LEN, send_buf);
 }
 
 /**
