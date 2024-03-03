@@ -208,6 +208,7 @@ int do_handshake(byte* hello_buffer) {
     print_debug("Component successfully verified AP challenge signature");
 
     // Handshake is done - component can now send back a confirmation or requested data
+    return 0;
 }
 
 // Example boot sequence
@@ -291,7 +292,7 @@ void process_validate() {
 }
 
 int process_attest() {
-    int ret = do_handshake();
+    int ret = do_handshake(&receive_buffer);
     if (ret != 0) {
         print_error("Error doing handshake!");
         return -1; 

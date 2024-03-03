@@ -207,7 +207,7 @@ int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
 
 /******************************** COMPONENT COMMS ********************************/
 
-int do_handshake(component_cmd_t initial_command) {
+int do_handshake(uint32_t component_id, component_cmd_t initial_command) {
     // Start handshake
     print_debug("Doing handshake");
 
@@ -450,14 +450,21 @@ int boot_components() {
 int attest_component(uint32_t component_id) {
     // Do handshake
     
-    int ret = do_handshake(COMPONENT_CMD_ATTEST);
+    int ret = do_handshake(component_id, COMPONENT_CMD_ATTEST);
     if (ret != 0) {
         print_error("Error while doing handshake");
         return ERROR_RETURN;
     }
 
+    // Buffer for receiving data
+    uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
+    bzero(receive_buffer, sizeof(receive_buffer));
+
+    // Set the I2C address of the component
+    i2c_addr_t addr = component_id_to_i2c_addr(component_id);
+
     // Now component will respond with the requested data
-    len = poll_and_receive_packet(addr, receive_buffer);
+    int len = poll_and_receive_packet(addr, receive_buffer);
     if (len == ERROR_RETURN) {
         print_error("Error in receiving data packet from component");
         return ERROR_RETURN;
