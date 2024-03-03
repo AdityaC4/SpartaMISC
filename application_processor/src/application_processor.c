@@ -210,150 +210,151 @@ int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
 int do_handshake(uint32_t component_id, uint8_t initial_command) {
     return 0;
     
-    // // Start handshake
-    // print_debug("Doing handshake");
+    // Start handshake
+    print_debug("Doing handshake");
 
-    // WC_RNG rng;
-    // wc_InitRng(&rng);
+    WC_RNG rng;
+    wc_InitRng(&rng);
 
-    // int ret;
+    int ret;
 
-    // // AP hello message
-    // ecc_key ap_dh_key;
-    // signed_hello_with_cert ap_hello;
+    // Buffers for board link communication
+    uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
+    bzero(receive_buffer, sizeof(receive_buffer));
 
-    // // Buffers for board link communication
-    // uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
-    // bzero(receive_buffer, sizeof(receive_buffer));
+    uint8_t receive_buffer_2[MAX_I2C_MESSAGE_LEN];
+    bzero(receive_buffer_2, sizeof(receive_buffer_2));
 
-    // uint8_t receive_buffer_2[MAX_I2C_MESSAGE_LEN];
-    // bzero(receive_buffer_2, sizeof(receive_buffer_2));
+    uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
+    bzero(transmit_buffer, sizeof(transmit_buffer));
 
-    // uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
-    // bzero(transmit_buffer, sizeof(transmit_buffer));
+    // Set the I2C address of the component
+    i2c_addr_t addr = component_id_to_i2c_addr(component_id);
 
-    // // Set the I2C address of the component
-    // i2c_addr_t addr = component_id_to_i2c_addr(component_id);
+    // Create command message
+    command_message *command = (command_message *)transmit_buffer;
+    command->opcode = initial_command;
 
-    // // Create command message
-    // command_message *command = (command_message *)transmit_buffer;
-    // command->opcode = initial_command;
+    // Create hello message
+    curve25519_key ap_dh_key;
+    signed_hello_with_cert ap_hello;
 
-    // // Create hello message
-    // ret = create_hello(&ap_hello, 1, &ap_dh_key);
-    // if (ret != 0) {
-    //     print_debug("Error creating signed ap hello with cert");
-    //     return -1;
-    // }
-    // memcpy(command->params, &ap_hello, sizeof(ap_hello));
+    ret = create_hello(&ap_hello, 1, &ap_dh_key);
+    if (ret != 0)
+    {
+        print_debug("Error creating signed ap hello with cert");
+        return -1;
+    }
 
-    // print_debug("Issuing hello attest command...");
+    print_debug("Issuing hello attest command...");
 
-    // // Send out command along with hello and receive result
-    // // int len = issue_cmd(addr, transmit_buffer, receive_buffer);
-    // // if (len == ERROR_RETURN) {
-    // //     print_error("Could not attest component\n");
-    // //     return ERROR_RETURN;
-    // // }
-
-    // int result = send_packet(addr, sizeof(uint8_t) + sizeof(ap_hello), transmit_buffer);
-    // if (result == ERROR_RETURN) {
-    //     print_error("Could not send hello packet to component");
-    //     return ERROR_RETURN;
-    // }
-
-    // // Receive first response
-    // int len = poll_and_receive_packet(addr, receive_buffer);
+    // Send out command along with hello and receive result
+    // int len = issue_cmd(addr, transmit_buffer, receive_buffer);
     // if (len == ERROR_RETURN) {
-    //     print_error("Could not receive first response from component");
-    //     return ERROR_RETURN;
-    // }
-    // // print_debug("Received first response from component");
-    // // print_info("%s", receive_buffer);
-
-    // print_debug("Received first response, polling for challenge signature...");
-
-    // // Immediately after, poll for and receive the challenge signature
-    // len = poll_and_receive_packet(addr, receive_buffer_2);
-    // if (len == ERROR_RETURN) {
-    //     print_error("Error in receiving challenge response packet");
+    //     print_error("Could not attest component\n");
     //     return ERROR_RETURN;
     // }
 
-    // // The first response packet from component will be the component's hello
-    // signed_hello_with_cert comp_hello;
-    // memcpy((byte *)&comp_hello, receive_buffer, sizeof(comp_hello));
+    int result = send_packet(addr, sizeof(uint8_t) + sizeof(ap_hello), transmit_buffer);
+    if (result == ERROR_RETURN) {
+        print_error("Could not send hello packet to component");
+        return ERROR_RETURN;
+    }
 
-    // // The second one is the challenge signature
-    // signed_chal comp_sc;
-    // memcpy((byte *)&comp_sc, receive_buffer_2, sizeof(comp_sc));
+    // Receive first response
+    int len = poll_and_receive_packet(addr, receive_buffer);
+    if (len == ERROR_RETURN) {
+        print_error("Could not receive first response from component");
+        return ERROR_RETURN;
+    }
+    // print_debug("Received first response from component");
+    // print_info("%s", receive_buffer);
 
-    // // AP verifies component hello along with the challenge signature, derives
-    // // the shared key
-    // byte ap_shared_key[SHARED_KEY_SIZE];
-    // word32 ap_shared_key_size = SHARED_KEY_SIZE;
+    print_debug("Received first response, polling for challenge signature...");
 
-    // // This is the component's pubkey as parsed by the AP from the response
-    // // Saved for verifying challenge response signature
-    // ecc_key comp_pubkey;
-    // wc_ecc_init(&comp_pubkey);
+    // Immediately after, poll for and receive the challenge signature
+    len = poll_and_receive_packet(addr, receive_buffer_2);
+    if (len == ERROR_RETURN) {
+        print_error("Error in receiving challenge response packet");
+        return ERROR_RETURN;
+    }
 
-    // print_debug("AP verifying component hello: ");
+    // The first response packet from component will be the component's hello
+    signed_hello_with_cert comp_hello;
+    memcpy((byte *)&comp_hello, receive_buffer, sizeof(comp_hello));
 
-    // // Verifying component's hello
-    // ret = verify_hello(&comp_hello, ap_shared_key, &ap_shared_key_size,
-    //                    &ap_dh_key, (word32)component_id, &comp_pubkey);
-    // if (ret != 0) {
-    //     print_debug("Failed to verify component hello");
-    //     return -1;
-    // }
+    // The second one is the challenge signature
+    signed_chal comp_sc;
+    memcpy((byte *)&comp_sc, receive_buffer_2, sizeof(comp_sc));
 
-    // // Verify component's signed challenge
-    // print_debug("AP verifying challenge signature from component");
-    // ret = verify_data_signature((byte *)ap_hello.sh.hi.dh_pubkey,
-    //                             COMPR_KEY_SIZE, comp_sc.chal_sig,
-    //                             comp_sc.chal_sig_size, &comp_pubkey);
-    // if (ret != 0) {
-    //     print_debug("Signature verification failed");
-    //     return -1;
-    // }
+    // AP verifies component hello along with the challenge signature, derives
+    // the shared key
+    byte ap_shared_key[SHARED_KEY_SIZE];
+    word32 ap_shared_key_size = SHARED_KEY_SIZE;
 
-    // print_debug("AP successfully verified component challenge signature");
+    // This is the component's pubkey as parsed by the AP from the response
+    // Saved for verifying challenge response signature
+    ed25519_key loaded_comp_pubkey;
+    wc_ed25519_init(&loaded_comp_pubkey);
 
-    // // AP now signs component's DH pubkey as its challenge response
-    // ecc_key ap_key;
-    // ret = load_ap_private_key(&ap_key);
-    // if (ret != 0) {
-    //     print_debug("Error loading AP key: %d", ret);
-    //     return -1;
-    // }
+    print_debug("AP verifying component hello: ");
 
-    // print_debug("AP signing Component dh key as challenge");
+    ret = verify_hello(&comp_hello, ap_shared_key, &ap_shared_key_size, &ap_dh_key,
+                       COMPONENT_ID, &loaded_comp_pubkey);
+    if (ret != 0)
+    {
+        print_debug("Failed to verify component hello");
+        return -1;
+    }
 
-    // byte ap_chal_sig_out[ECC_SIG_SIZE];
-    // word32 ap_chal_sig_sz = ECC_SIG_SIZE;
+    print_debug("AP verifying challenge signature from component");
+    ret = verify_data_signature((byte *)ap_hello.sh.hi.dh_pubkey, CURVE25519_PUB_KEY_SIZE,
+                                comp_sc.chal_sig, comp_sc.chal_sig_size,
+                                &loaded_comp_pubkey);
+    if (ret != 0)
+    {
+        print_debug("Signature verification failed");
+        return -1;
+    }
 
-    // ret = sign_data((byte *)&(comp_hello.sh.hi.dh_pubkey), COMPR_KEY_SIZE,
-    //                 ap_chal_sig_out, &ap_chal_sig_sz, &ap_key, &rng);
-    // if (ret != 0) {
-    //     print_debug("Error signing component DH pubkey with AP key: %d", ret);
-    //     return -1;
-    // }
+    print_debug("AP successfully verified component challenge signature");
 
-    // print_debug("Setting challenge signature in response struct");
+    // AP now signs component's DH pubkey as its challenge response
+    ed25519_key ap_key;
+    ret = load_ap_private_key(&ap_key);
+    if (ret != 0)
+    {
+        print_debug("Error loading AP key: %d", ret);
+        return -1;
+    }
 
-    // signed_chal ap_sc;
+    print_debug("AP signing Component dh key as challenge");
 
-    // memset(ap_sc.chal_sig, 0, ECC_SIG_SIZE);
-    // memcpy(ap_sc.chal_sig, ap_chal_sig_out, ap_chal_sig_sz);
-    // ap_sc.chal_sig_size = ap_chal_sig_sz;
+    byte ap_chal_sig_out[ED25519_SIG_SIZE];
+    word32 ap_chal_sig_sz = ED25519_SIG_SIZE;
 
-    // // Send this challenge signature to component
-    // bzero(receive_buffer, sizeof(receive_buffer));
+    ret = sign_data((byte *)&(comp_hello.sh.hi.dh_pubkey), CURVE25519_PUB_KEY_SIZE,
+                    ap_chal_sig_out, &ap_chal_sig_sz, &ap_key);
+    if (ret != 0)
+    {
+        print_debug("Error signing component DH pubkey with AP key: %d", ret);
+        return -1;
+    }
 
-    // send_packet(addr, sizeof(ap_sc), (uint8_t *)&ap_sc);
+    print_debug("Setting challenge signature in response struct");
 
-    // // The handshake finishes here, the AP can then poll for a data packet from component
+    signed_chal ap_sc;
+
+    memset(ap_sc.chal_sig, 0, ED25519_SIG_SIZE);
+    memcpy(ap_sc.chal_sig, ap_chal_sig_out, ap_chal_sig_sz);
+    ap_sc.chal_sig_size = ap_chal_sig_sz;
+
+    // Send this challenge signature to component
+    bzero(receive_buffer, sizeof(receive_buffer));
+
+    send_packet(addr, sizeof(ap_sc), (uint8_t *)&ap_sc);
+
+    // The handshake finishes here, the AP can then poll for a data packet from component
 }
 
 int scan_components() {
@@ -451,6 +452,7 @@ int boot_components() {
 
 int attest_component(uint32_t component_id) {
     // Do handshake
+    print_debug("In attest_component");
     
     int ret = do_handshake(component_id, COMPONENT_CMD_ATTEST);
     if (ret != 0) {

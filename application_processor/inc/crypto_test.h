@@ -10,6 +10,7 @@
 #include "wolfssl/wolfcrypt/asn_public.h"
 #include "wolfssl/wolfcrypt/integer.h"
 #include "wolfssl/wolfcrypt/ed25519.h"
+#include "wolfssl/wolfcrypt/curve25519.h"
 
 // Test values for simulated handshake
 #define COMP_PRIVKEY_DER                                                                                                                                                                                                                                                                       \
@@ -23,17 +24,14 @@
 
 #define COMPONENT_ID 286331173
 
-#define ECC_CURVE ECC_SECP256R1
+#define ECC_CURVE ECC_X25519
 #define ECC_KEY_LEN 32
-
-#define COMPR_KEY_SIZE 33
-#define COMPR_KEY_BUFSIZE 36 // To avoid struct padding issues, just in case
 
 #define PUBKEY_BUF_LEN ECC_BUFSIZE
 #define PUBKEY_LEN ECC_MAXSIZE + 1
 
 #define POINT_SIZE 32
-#define ECC_SIG_SIZE 72
+#define ECC_SIG_SIZE ED25519_SIG_SIZE // was 72
 
 #define SHARED_KEY_SIZE 32
 
@@ -46,15 +44,14 @@
 
 typedef struct cert_data
 {
-    byte pubkey[32];
+    byte pubkey[ED25519_PUB_KEY_SIZE];
     word32 tag;
 } cert_data;
 
 typedef struct hello
 {
     byte pubkey[ED25519_PUB_KEY_SIZE];
-    // Compressed ANSI X9.63 keys
-    byte dh_pubkey[COMPR_KEY_BUFSIZE];
+    byte dh_pubkey[CURVE25519_PUB_KEY_SIZE];
 } hello;
 
 typedef struct signed_hello
@@ -88,7 +85,7 @@ typedef struct signed_chal
     word32 chal_sig_size;
 } signed_chal;
 
-int make_ecc_key(ecc_key *key, WC_RNG *rng);
+int make_ecc_key(curve25519_key *key, WC_RNG *rng);
 
 int load_ap_private_key(ed25519_key *key);
 
@@ -105,10 +102,10 @@ int sign_data(const byte *data, word32 data_size, byte *sig, word32 *sig_size,
 int verify_data_signature(const byte *data, word32 data_size, const byte *sig,
                           word32 sig_size, ed25519_key *key);
 
-int create_hello(signed_hello_with_cert *msg, int is_ap, ecc_key *self_dh_key);
+int create_hello(signed_hello_with_cert *msg, int is_ap, curve25519_key *self_dh_key);
 
 int verify_hello(signed_hello_with_cert *msg, byte *shared_key,
-                 word32 *shared_key_sz, ecc_key *self_dh_key,
+                 word32 *shared_key_sz, curve25519_key *self_dh_key,
                  word32 sender_device_id, // Component ID or AP tag
                  ed25519_key *sender_pubkey);
 

@@ -1,11 +1,11 @@
 #include "crypto_test.h"
 
-int make_ecc_key(ecc_key *key, WC_RNG *rng)
+int make_curve25519_key(curve25519_key *key, WC_RNG *rng)
 {
-    int ret = wc_ecc_init(key);
+    int ret = wc_curve25519_init(key);
     if (ret == 0)
     {
-        ret = wc_ecc_make_key_ex(rng, ECC_KEY_LEN, key, ECC_CURVE);
+        ret = wc_curve25519_make_key(rng, ECC_KEY_LEN, key);
     }
 
     return ret;
@@ -159,7 +159,7 @@ int verify_data_signature(const byte *data, word32 data_size, const byte *sig,
  * signature of the two and its certificate.
  * This function initializes and sets self_dh_key
  */
-int create_hello(signed_hello_with_cert *msg, int is_ap, ecc_key *self_dh_key)
+int create_hello(signed_hello_with_cert *msg, int is_ap, curve25519_key *self_dh_key)
 {
     print_info("In create_hello()");
 
@@ -185,7 +185,7 @@ int create_hello(signed_hello_with_cert *msg, int is_ap, ecc_key *self_dh_key)
         return -1;
     }
 
-    ret = make_ecc_key(self_dh_key, &rng);
+    ret = make_curve25519_key(self_dh_key, &rng);
     if (ret != 0)
     {
         print_debug("Error making DH key: %d", ret);
@@ -200,8 +200,8 @@ int create_hello(signed_hello_with_cert *msg, int is_ap, ecc_key *self_dh_key)
     }
     print_debug("Exported ed25519 public key to buffer: wrote bytes");
 
-    word32 outLen = COMPR_KEY_BUFSIZE;
-    ret = wc_ecc_export_x963_ex(self_dh_key, msg->sh.hi.dh_pubkey, &outLen, 1);
+    word32 outLen = CURVE25519_PUB_KEY_SIZE;
+    ret = wc_curve25519_export_public_ex(self_dh_key, msg->sh.hi.dh_pubkey, &outLen, EC25519_BIG_ENDIAN);
     if (ret != 0)
     {
         print_debug("Error exporting device DH key to buffer: %d", ret);
@@ -277,7 +277,7 @@ int create_hello(signed_hello_with_cert *msg, int is_ap, ecc_key *self_dh_key)
  * and it's own DH key passed as a parameter
  */
 int verify_hello(signed_hello_with_cert *msg, byte *shared_key,
-                 word32 *shared_key_sz, ecc_key *self_dh_key,
+                 word32 *shared_key_sz, curve25519_key *self_dh_key,
                  word32 sender_device_id, // Component ID or AP tag
                  ed25519_key *sender_pubkey)
 {
@@ -299,7 +299,7 @@ int verify_hello(signed_hello_with_cert *msg, byte *shared_key,
     print_debug("Loading sender public key from msg");
 
     ret =
-        wc_ed25519_import_public((msg->sh).hi.pubkey, ED25519_PUB_KEY_SIZE, sender_pubkey);
+        wc_ed25519_import_public_ex((msg->sh).hi.pubkey, ED25519_PUB_KEY_SIZE, sender_pubkey, EC25519_BIG_ENDIAN);
     if (ret != 0)
     {
         print_debug("Error loading sender public key: %d", ret);
@@ -319,10 +319,10 @@ int verify_hello(signed_hello_with_cert *msg, byte *shared_key,
 
     print_debug("Loading sender DH public key from msg");
 
-    ecc_key sender_dh_pubkey;
-    ret = wc_ecc_init(&sender_dh_pubkey);
-    ret = wc_ecc_import_x963((msg->sh).hi.dh_pubkey, COMPR_KEY_SIZE,
-                             &sender_dh_pubkey);
+    curve25519_key sender_dh_pubkey;
+    ret = wc_curve25519_init(&sender_dh_pubkey);
+    
+    ret = wc_curve25519_import_public((msg->sh).hi.dh_pubkey, CURVE25519_PUB_KEY_SIZE, &sender_dh_pubkey);
     if (ret != 0)
     {
         print_debug("Error loading sender DH public key: %d", ret);
@@ -381,8 +381,8 @@ int verify_hello(signed_hello_with_cert *msg, byte *shared_key,
     // self_dh_key->rng = &rng;
     // sender_dh_pubkey.rng = &rng;
 
-    ret = wc_ecc_shared_secret(self_dh_key, &sender_dh_pubkey, shared_key,
-                               shared_key_sz);
+    ret = wc_curve25519_shared_secret_ex(self_dh_key, &sender_dh_pubkey, shared_key,
+                                         shared_key_sz, EC25519_BIG_ENDIAN);
     if (ret != 0)
     {
         print_debug("Error creating shared key: %d", ret);
@@ -409,7 +409,7 @@ int simulate_handshake()
 
     // AP creates hello
 
-    ecc_key ap_dh_key;
+    curve25519_key ap_dh_key;
     signed_hello_with_cert msg;
 
     ret = create_hello(&msg, 1, &ap_dh_key);
@@ -423,7 +423,7 @@ int simulate_handshake()
 
     // Preemptively creating component's hello here first to initialize its DH
     // key
-    ecc_key comp_dh_key;
+    curve25519_key comp_dh_key;
     print_debug("Creating hello for component");
     signed_hello_with_cert resp;
     ret = create_hello(&resp, 0, &comp_dh_key);
@@ -461,7 +461,7 @@ int simulate_handshake()
     byte comp_chal_sig_out[ED25519_SIG_SIZE];
     word32 comp_chal_sig_sz = ED25519_SIG_SIZE;
 
-    ret = sign_data((byte *)&(msg.sh.hi.dh_pubkey), COMPR_KEY_SIZE,
+    ret = sign_data((byte *)&(msg.sh.hi.dh_pubkey), CURVE25519_PUB_KEY_SIZE,
                     comp_chal_sig_out, &comp_chal_sig_sz, &comp_key);
     if (ret != 0)
     {
@@ -501,7 +501,7 @@ int simulate_handshake()
     }
 
     print_debug("AP verifying challenge signature from component");
-    ret = verify_data_signature((byte *)msg.sh.hi.dh_pubkey, COMPR_KEY_SIZE,
+    ret = verify_data_signature((byte *)msg.sh.hi.dh_pubkey, CURVE25519_PUB_KEY_SIZE,
                                 resp_chal.chal_sig, resp_chal.chal_sig_size,
                                 &sender_pubkey_for_ap);
     if (ret != 0)
@@ -526,7 +526,7 @@ int simulate_handshake()
     byte ap_chal_sig_out[ED25519_SIG_SIZE];
     word32 ap_chal_sig_sz = ED25519_SIG_SIZE;
 
-    ret = sign_data((byte *)&(resp.sh.hi.dh_pubkey), COMPR_KEY_SIZE,
+    ret = sign_data((byte *)&(resp.sh.hi.dh_pubkey), CURVE25519_PUB_KEY_SIZE,
                     ap_chal_sig_out, &ap_chal_sig_sz, &ap_key);
     if (ret != 0)
     {
@@ -546,7 +546,7 @@ int simulate_handshake()
 
     print_debug("Component verifying signed challenge from AP");
 
-    ret = verify_data_signature((byte *)&(resp.sh.hi.dh_pubkey), COMPR_KEY_SIZE,
+    ret = verify_data_signature((byte *)&(resp.sh.hi.dh_pubkey), CURVE25519_PUB_KEY_SIZE,
                                 sc_msg.chal_sig, sc_msg.chal_sig_size,
                                 &sender_pubkey_for_comp);
     if (ret != 0)
