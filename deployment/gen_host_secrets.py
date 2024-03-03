@@ -4,7 +4,7 @@ from Crypto.PublicKey import ECC
 def main():
 	print("Generating host key...")
 
-	key = ECC.generate(curve='secp256r1')
+	key = ECC.generate(curve='ed25519')
 
 	filename = "host_private_key.pem"
 

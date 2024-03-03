@@ -9,98 +9,108 @@
 #include "wolfssl/wolfcrypt/random.h"
 #include "wolfssl/wolfcrypt/asn_public.h"
 #include "wolfssl/wolfcrypt/integer.h"
+#include "wolfssl/wolfcrypt/ed25519.h"
 
 // Test values for simulated handshake
-#define COMP_PRIVKEY_DER { 0x30,0x81,0x87,0x2,0x1,0x0,0x30,0x13,0x6,0x7,0x2a,0x86,0x48,0xce,0x3d,0x2,0x1,0x6,0x8,0x2a,0x86,0x48,0xce,0x3d,0x3,0x1,0x7,0x4,0x6d,0x30,0x6b,0x2,0x1,0x1,0x4,0x20,0x3f,0x59,0x56,0xa9,0xab,0xc4,0xbb,0xd5,0x91,0x60,0xca,0x19,0xd8,0xdd,0x2e,0x6d,0xb5,0xf0,0x72,0xe4,0x2c,0x2d,0x3e,0xd2,0x2a,0x63,0x5d,0x88,0x7a,0x9b,0x25,0x71,0xa1,0x44,0x3,0x42,0x0,0x4,0xaa,0x66,0x7d,0xeb,0x36,0xa0,0xf0,0x5,0xdd,0xae,0x83,0xe1,0xe2,0x80,0x28,0x11,0x93,0xc5,0x42,0x78,0x42,0xfa,0x25,0x25,0x1d,0x3a,0xe9,0xc0,0x74,0x44,0x65,0x85,0x4e,0x76,0x4b,0x56,0x34,0xe1,0x44,0x59,0xc3,0x69,0xa7,0x2e,0xde,0x96,0xd4,0x5f,0x92,0x1c,0xdc,0xf3,0x99,0xb,0x22,0x3a,0xf6,0x4a,0xda,0xb5,0x5b,0x44,0x49,0x57 }  
-#define COMP_CERT_SIGNATURE { 0x30,0x45,0x2,0x21,0x0,0xe0,0xc2,0x17,0x62,0xe2,0x18,0x98,0xbe,0x3d,0xcf,0x4b,0xd8,0x19,0x17,0xb,0xc1,0x6a,0x26,0x92,0x50,0xa3,0x9d,0x45,0x63,0xf9,0x9c,0x8c,0x25,0x11,0x3b,0xcb,0xdf,0x2,0x20,0x14,0xae,0x4f,0x4b,0xf,0xae,0xa2,0x7f,0x2e,0x1c,0xe,0xff,0xf1,0x42,0x9f,0x5f,0x87,0x3b,0xfe,0xbb,0x8d,0xc9,0x50,0x39,0x26,0x70,0x70,0xf4,0x3f,0xd,0x16,0x7f } 
+#define COMP_PRIVKEY_DER                                                                                                                                                                                                                                                                       \
+    {                                                                                                                                                                                                                                                                                          \
+        0x30, 0x2e, 0x2, 0x1, 0x0, 0x30, 0x5, 0x6, 0x3, 0x2b, 0x65, 0x70, 0x4, 0x22, 0x4, 0x20, 0x85, 0xa8, 0x64, 0x7e, 0xe1, 0x7f, 0x3a, 0xbb, 0xb6, 0x4e, 0x38, 0xad, 0x9c, 0xc4, 0xf4, 0xbe, 0xbc, 0xd5, 0xdd, 0x13, 0x76, 0xac, 0xde, 0x18, 0x73, 0xf6, 0x94, 0x73, 0x7b, 0xcc, 0x8e, 0xf1 \
+    }
+#define COMP_CERT_SIGNATURE                                                                                                                                                                                                                                                                                                                                                                        \
+    {                                                                                                                                                                                                                                                                                                                                                                                              \
+        0xe9, 0xb, 0x33, 0xab, 0x96, 0x32, 0xdc, 0xf1, 0x34, 0xf2, 0x28, 0xf2, 0x99, 0x16, 0x55, 0x5b, 0xec, 0x1c, 0xa5, 0xe, 0x83, 0x10, 0xe2, 0xc0, 0x75, 0x6c, 0x67, 0x87, 0x86, 0xf8, 0xf9, 0x82, 0x9e, 0x64, 0x6d, 0x1d, 0xb3, 0x6c, 0x47, 0x20, 0xdc, 0xa1, 0x7c, 0x31, 0x8c, 0xea, 0x56, 0x2, 0x59, 0x61, 0x6e, 0xfa, 0xe8, 0xaf, 0xd0, 0x5f, 0xdb, 0xea, 0x5c, 0x91, 0x8d, 0xcb, 0xa6, 0x1 \
+    }
 
 #define COMPONENT_ID 286331173
 
-#define ECC_CURVE			ECC_SECP256R1
-#define ECC_KEY_LEN			32
+#define ECC_CURVE ECC_SECP256R1
+#define ECC_KEY_LEN 32
 
-#define COMPR_KEY_SIZE		33
-#define COMPR_KEY_BUFSIZE	36 	// To avoid struct padding issues, just in case
+#define COMPR_KEY_SIZE 33
+#define COMPR_KEY_BUFSIZE 36 // To avoid struct padding issues, just in case
 
-#define PUBKEY_BUF_LEN		ECC_BUFSIZE
-#define PUBKEY_LEN 			ECC_MAXSIZE+1
+#define PUBKEY_BUF_LEN ECC_BUFSIZE
+#define PUBKEY_LEN ECC_MAXSIZE + 1
 
-#define POINT_SIZE			32
-#define CERT_DATA_SIZE		2 * POINT_SIZE + 4
-#define ECC_SIG_SIZE 		72
+#define POINT_SIZE 32
+#define ECC_SIG_SIZE 72
 
-#define SHARED_KEY_SIZE		32
+#define SHARED_KEY_SIZE 32
 
-#define AP_TAG				0xffffffff
+#define AP_TAG 0xffffffff
 
 #define IS_AP 1
 #define IS_COMPONENT 1
 
 // All of these should be smaller than MAX_I2C_MESSAGE_LEN-1
 
-typedef struct cert_data {
-	byte pubkey_x[32];
-	byte pubkey_y[32];
-	word32 tag;
+typedef struct cert_data
+{
+    byte pubkey[32];
+    word32 tag;
 } cert_data;
 
-typedef struct hello {
-	// Compressed ANSI X9.63 keys
-	byte pubkey[COMPR_KEY_BUFSIZE];
-	byte dh_pubkey[COMPR_KEY_BUFSIZE];
+typedef struct hello
+{
+    byte pubkey[ED25519_PUB_KEY_SIZE];
+    // Compressed ANSI X9.63 keys
+    byte dh_pubkey[COMPR_KEY_BUFSIZE];
 } hello;
 
-typedef struct signed_hello {
-	hello hi;
-	byte hello_sig[ECC_SIG_SIZE];
-	word32 hello_sig_size;
+typedef struct signed_hello
+{
+    hello hi;
+    byte hello_sig[ED25519_SIG_SIZE];
+    word32 hello_sig_size;
 } signed_hello;
 
 // Hellos shared between AP and component with certificate and DH key info
-typedef struct signed_hello_with_cert {
-	signed_hello sh;
+typedef struct signed_hello_with_cert
+{
+    signed_hello sh;
 
-	byte cert_sig[ECC_SIG_SIZE];
-	word32 cert_sig_size;
+    byte cert_sig[ED25519_SIG_SIZE];
+    word32 cert_sig_size;
 } signed_hello_with_cert;
 
 // Response from the Component to the AP: contains the same data except with a signed challenge (DH pubkey)
 // typedef struct signed_hello_with_cert_and_chal {
-// 	signed_hello_with_cert shc; 
+// 	signed_hello_with_cert shc;
 
 // 	byte chal_sig[ECC_SIG_SIZE];
 // 	word32 chal_sig_size;
 // } signed_hello_with_cert_and_chal;
 
 // Sent back by the AP to the Component as AP's challenge-response to finish the verification
-typedef struct signed_chal {
-	byte chal_sig[ECC_SIG_SIZE];
-	word32 chal_sig_size;
+typedef struct signed_chal
+{
+    byte chal_sig[ED25519_SIG_SIZE];
+    word32 chal_sig_size;
 } signed_chal;
 
-int make_ecc_key(ecc_key* key, WC_RNG* rng);
+int make_ecc_key(ecc_key *key, WC_RNG *rng);
 
-int load_ap_private_key(ecc_key *key);
+int load_ap_private_key(ed25519_key *key);
 
-int load_comp_private_key(ecc_key *key);
+int load_comp_private_key(ed25519_key *key);
 
-int load_host_public_key(ecc_key *key);
+int load_host_public_key(ed25519_key *key);
 
-int construct_device_cert_data(cert_data *cert, ecc_key *device_key,
+int construct_device_cert_data(cert_data *cert, ed25519_key *device_key,
                                word32 dev_id);
 
 int sign_data(const byte *data, word32 data_size, byte *sig, word32 *sig_size,
-              ecc_key *key, WC_RNG *rng);
+              ed25519_key *key);
 
 int verify_data_signature(const byte *data, word32 data_size, const byte *sig,
-                          word32 sig_size, ecc_key *key);
+                          word32 sig_size, ed25519_key *key);
 
 int create_hello(signed_hello_with_cert *msg, int is_ap, ecc_key *self_dh_key);
 
 int verify_hello(signed_hello_with_cert *msg, byte *shared_key,
                  word32 *shared_key_sz, ecc_key *self_dh_key,
                  word32 sender_device_id, // Component ID or AP tag
-                 ecc_key *sender_pubkey);
+                 ed25519_key *sender_pubkey);
 
 int simulate_handshake();
 

@@ -1,7 +1,7 @@
 import os
 from Crypto.PublicKey import ECC
 from Crypto.Util.number import long_to_bytes
-from Crypto.Signature import DSS
+from Crypto.Signature import eddsa
 from Crypto.Hash import SHA256
 from pathlib import Path
 import binascii 
@@ -20,10 +20,12 @@ def main():
 	host_private_key = ECC.import_key(data)
 	f.close()
 
-	ap_private_key = ECC.generate(curve='secp256r1')
+	ap_private_key = ECC.generate(curve='ed25519')
 	ap_public_key = ap_private_key.public_key()
 
-	ap_public_key_bytes = long_to_bytes(ap_public_key._point.x, ECC_PRIVSIZE) + long_to_bytes(ap_public_key._point.y, ECC_PRIVSIZE)
+	ap_public_key_bytes = ap_public_key.export_key(format='raw') # Export 32 byte Ed25519 public key
+	# print("Ap public key bytes: ")
+	# print(ap_public_key_bytes.hex())
 
 	# identifier for AP
 	dev_id = 0xffffffff
@@ -34,8 +36,8 @@ def main():
 
 	# Generate signature
 	h = SHA256.new(cert_data)
-	signer = DSS.new(host_private_key, 'fips-186-3', 'der')
-	signature = signer.sign(h)
+	signer = eddsa.new(host_private_key, 'rfc8032')
+	signature = signer.sign(h.digest())
 
 	# Get host public key in DER format
 	host_public_key_der = host_private_key.public_key().export_key(format='DER')
