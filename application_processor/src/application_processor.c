@@ -207,7 +207,7 @@ int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
 
 /******************************** COMPONENT COMMS ********************************/
 
-int do_handshake(uint32_t component_id, component_cmd_t initial_command) {
+int do_handshake(uint32_t component_id, uint8_t initial_command) {
     // Start handshake
     print_debug("Doing handshake");
 
@@ -254,7 +254,7 @@ int do_handshake(uint32_t component_id, component_cmd_t initial_command) {
     //     return ERROR_RETURN;
     // }
 
-    int result = send_packet(addr, sizeof(uint8_t), transmit_buffer);
+    int result = send_packet(addr, sizeof(uint8_t) + sizeof(ap_hello), transmit_buffer);
     if (result == ERROR_RETURN) {
         print_error("Could not send hello packet to component");
         return ERROR_RETURN;
