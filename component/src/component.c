@@ -110,7 +110,9 @@ void secure_send(uint8_t* buffer, uint8_t len) {
  * This function must be implemented by your team to align with the security requirements.
 */
 int secure_receive(uint8_t* buffer) {
-    return wait_and_receive_packet(buffer);
+    int ret = wait_and_receive_packet(buffer);
+    if (ret < 0) return ret;
+    return MAX_I2C_MESSAGE_LEN;
 }
 
 /******************************* FUNCTION DEFINITIONS *********************************/
