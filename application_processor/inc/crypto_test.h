@@ -34,6 +34,8 @@
 
 #define AP_TAG				0xffffffff
 
+#define IS_AP 1
+
 // All of these should be smaller than MAX_I2C_MESSAGE_LEN-1
 
 typedef struct cert_data {

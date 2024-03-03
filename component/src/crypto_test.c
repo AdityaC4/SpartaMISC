@@ -9,21 +9,25 @@ int make_ecc_key(ecc_key *key, WC_RNG *rng) {
     return ret;
 }
 
+#ifdef IS_AP
 int load_ap_private_key(ecc_key *key) {
-    return -1;
-    // int ret = wc_ecc_init(key);
-    // if (ret == 0) {
-    //     print_debug("Importing AP private key from der...");
+    int ret = wc_ecc_init(key);
+    if (ret == 0) {
+        print_debug("Importing AP private key from der...");
 
-    //     byte key_der[] = AP_PRIVKEY_DER;
-    //     word32 idx = 0;
-    //     ret =
-    //         wc_EccPrivateKeyDecode(key_der, &idx, key, (word32)sizeof(key_der));
-    // }
+        byte key_der[] = AP_PRIVKEY_DER;
+        word32 idx = 0;
+        ret =
+            wc_EccPrivateKeyDecode(key_der, &idx, key, (word32)sizeof(key_der));
+    }
 
-    // return ret;
+    return ret;
 }
+#else
+int load_ap_private_key(ecc_key *key) { return -1; }
+#endif
 
+#ifdef IS_COMPONENT
 int load_comp_private_key(ecc_key *key) {
     int ret = wc_ecc_init(key);
     if (ret == 0) {
@@ -37,6 +41,9 @@ int load_comp_private_key(ecc_key *key) {
 
     return ret;
 }
+#else
+int load_comp_private_key(ecc_key *key) { return -1; }
+#endif
 
 int load_host_public_key(ecc_key *key) {
     int ret = wc_ecc_init(key);
@@ -208,14 +215,21 @@ int create_hello(signed_hello_with_cert *msg, int is_ap, ecc_key *self_dh_key) {
 
     print_debug("Setting host certificate signature in msg");
 
-    // byte ap_host_cert[] = AP_CERT_SIGNATURE;
+#ifdef IS_AP
+    byte ap_host_cert[] = AP_CERT_SIGNATURE;
+#else
+    byte ap_host_cert[] = {};
+#endif
+
+#ifdef IS_COMPONENT
     byte comp_host_cert[] = COMP_CERT_SIGNATURE;
+#else
+    byte comp_host_cert[] = {};
+#endif
 
     if (is_ap) {
-        print_error("Called AP create_hello() for component");
-        return -1;
-        // memcpy(&(msg->cert_sig), ap_host_cert, sizeof(ap_host_cert));
-        // msg->cert_sig_size = sizeof(ap_host_cert);
+        memcpy(&(msg->cert_sig), ap_host_cert, sizeof(ap_host_cert));
+        msg->cert_sig_size = sizeof(ap_host_cert);
     } else {
         memcpy(&(msg->cert_sig), comp_host_cert, sizeof(comp_host_cert));
         msg->cert_sig_size = sizeof(comp_host_cert);
@@ -275,6 +289,7 @@ int verify_hello(signed_hello_with_cert *msg, byte *shared_key,
     print_debug("Loading sender DH public key from msg");
 
     ecc_key sender_dh_pubkey;
+    ret = wc_ecc_init(&sender_dh_pubkey);
     ret = wc_ecc_import_x963((msg->sh).hi.dh_pubkey, COMPR_KEY_SIZE,
                              &sender_dh_pubkey);
     if (ret != 0) {

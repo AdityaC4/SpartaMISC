@@ -9,6 +9,7 @@ int make_ecc_key(ecc_key *key, WC_RNG *rng) {
     return ret;
 }
 
+#ifdef IS_AP
 int load_ap_private_key(ecc_key *key) {
     int ret = wc_ecc_init(key);
     if (ret == 0) {
@@ -22,7 +23,11 @@ int load_ap_private_key(ecc_key *key) {
 
     return ret;
 }
+#else
+int load_ap_private_key(ecc_key *key) { return -1; }
+#endif
 
+#ifdef IS_COMPONENT
 int load_comp_private_key(ecc_key *key) {
     int ret = wc_ecc_init(key);
     if (ret == 0) {
@@ -36,6 +41,9 @@ int load_comp_private_key(ecc_key *key) {
 
     return ret;
 }
+#else
+int load_comp_private_key(ecc_key *key) { return -1; }
+#endif
 
 int load_host_public_key(ecc_key *key) {
     int ret = wc_ecc_init(key);
@@ -207,8 +215,17 @@ int create_hello(signed_hello_with_cert *msg, int is_ap, ecc_key *self_dh_key) {
 
     print_debug("Setting host certificate signature in msg");
 
+#ifdef IS_AP
     byte ap_host_cert[] = AP_CERT_SIGNATURE;
+#else
+    byte ap_host_cert[] = {};
+#endif
+
+#ifdef IS_COMPONENT
     byte comp_host_cert[] = COMP_CERT_SIGNATURE;
+#else
+    byte comp_host_cert[] = {};
+#endif
 
     if (is_ap) {
         memcpy(&(msg->cert_sig), ap_host_cert, sizeof(ap_host_cert));
@@ -272,6 +289,7 @@ int verify_hello(signed_hello_with_cert *msg, byte *shared_key,
     print_debug("Loading sender DH public key from msg");
 
     ecc_key sender_dh_pubkey;
+    ret = wc_ecc_init(&sender_dh_pubkey);
     ret = wc_ecc_import_x963((msg->sh).hi.dh_pubkey, COMPR_KEY_SIZE,
                              &sender_dh_pubkey);
     if (ret != 0) {
@@ -497,196 +515,3 @@ int simulate_handshake() {
 
     return 1;
 }
-
-// int verify_self_cert() {
-// 	print_info("In verify_self_cert");
-
-// 	WC_RNG mRng;
-// 	wc_InitRng(&mRng);
-
-// 	int ret; 
-
-// 	ecc_key host_pubkey;
-// 	ret = load_host_public_key(&host_pubkey);
-// 	if (ret != 0) {
-// 		print_debug("Error loading host public key: %d", ret);
-// 		return -1;
-// 	}
-
-// 	ecc_key ap_key;
-// 	ret = load_ap_private_key(&ap_key);
-// 	if (ret != 0) {
-// 		print_debug("Error loading AP key: %d", ret);
-// 		return -1;
-// 	}
-
-// 	print_debug("Dumping AP key x and y points: ");
-// 	print_hex_debug((byte*) ap_key.pubkey.x[0].dp, POINT_SIZE);
-// 	print_hex_debug((byte*) ap_key.pubkey.y[0].dp, POINT_SIZE);
-
-// 	print_debug("Creating certificate data from AP key");
-
-// 	cert_data cert;
-// 	construct_ap_cert_data(&cert, &ap_key);
-
-// 	// sanity check
-// 	print_debug("Sizeof cert_data is %d and CERT_DATA_SIZE is %d", (int) sizeof(cert_data), CERT_DATA_SIZE);
-
-// 	print_debug("Certificate data:");
-// 	print_hex_debug((byte *) &cert, CERT_DATA_SIZE);
-
-// 	byte cert_sig[] = CERT_SIGNATURE;
-
-// 	ret = verify_data_signature((byte*) &cert, CERT_DATA_SIZE, cert_sig, (word32) sizeof(cert_sig), &host_pubkey);
-
-// 	if (ret != 0) {
-//         print_debug("Signature verification failed");
-//         return -1;
-//     }
-//     else {
-//     	print_debug("Signature verified successfully! ");
-//     }
-
-//     return 1;
-// }
-
-// int create_keypair() {
-// 	print_info("In create_keypair()");
-
-// 	// verify_self_cert();
-
-// 	// simulate_handshake();
-
-// 	WC_RNG mRng;
-// 	wc_InitRng(&mRng);
-
-// 	int ret; 
-// 	ecc_key key; 
-
-// 	ret = wc_ecc_init(&key);
-
-//     if (ret == 0) {
-//         // ret = wc_ecc_make_key_ex(&mRng, 32, &key, ECC_CURVE);
-
-//         print_debug("Importing key from der...");
-
-//         byte privkeyder[] = AP_PRIVKEY_DER;
-//         word32 idx = 0;
-//         ret = wc_EccPrivateKeyDecode(privkeyder, &idx, &key, (word32) sizeof(privkeyder));
-//     }
-
-//     if (ret != 0) {
-//         print_debug("ecc make key failed %d\n", ret);
-//         return -1;
-//     }
-
-//     print_debug("Key initialized!");
-
-//     int check_result = wc_ecc_check_key(&key);
-
-// 	if (check_result == MP_OKAY)
-// 	{
-// 	    print_debug("Key check succeeded");
-// 	}
-// 	else
-// 	{
-// 	    print_debug("Key check failed");
-// 	}
-
-// 	// HASH DATA
-// 	char data[] = "Hello, this is a message for testing wolfSSL. The documentation is good but often confusing. I still don't know if wolfCrypt can work without dynamic memory or not.";
-
-// 	print_debug("Running SHA256 hash on data...");
-// 	byte hash_out[WC_SHA256_DIGEST_SIZE];
-// 	ret = wc_Sha256Hash((byte*) data, sizeof(data), hash_out);
-
-// 	if (ret != 0) {
-// 		print_debug("Error in doing SHA256 hash");
-// 		return -1;
-// 	}
-
-// 	print_debug("Hashed data: ");
-// 	print_hex_debug(hash_out, WC_SHA256_DIGEST_SIZE);
-
-// 	// SIGN HASH
-// 	byte sig_out[ECC_MAX_SIG_SIZE]; // An ECC signature is twice the length of the private key
-// 	memset(sig_out, 0, ECC_MAX_SIG_SIZE);
-// 	word32 sigSz = ECC_SIG_SIZE;
-
-// 	print_debug("Signing hash with ECC key... ");
-// 	ret = wc_ecc_sign_hash(hash_out, WC_SHA256_DIGEST_SIZE, sig_out, &sigSz, &mRng, &key);
-// 	if (ret != 0) {
-// 		print_debug("Error signing hash.");
-// 		return -1;
-// 	}
-// 	print_debug("Signed hash with signature length %d:", sigSz);
-// 	print_hex_debug(sig_out, sigSz);
-
-// 	// EXPORT PUBLIC KEY
-// 	print_debug("Exporting public key to x963...");
-
-// 	byte pubkey_buf[PUBKEY_BUF_LEN];
-// 	word32 pubkey_buf_size = PUBKEY_BUF_LEN;
-// 	memset(pubkey_buf, 0, PUBKEY_BUF_LEN);
-
-// 	ret = wc_ecc_export_x963(&key, pubkey_buf, &pubkey_buf_size);
-// 	if (ret != 0) {
-// 		print_debug("ECC public key x963 export failed! %d\n", ret);
-// 		return -1;
-// 	}
-// 	print_debug("Exported public key to a buffer as x963 of size %d: ", pubkey_buf_size);
-// 	print_hex_debug(pubkey_buf, PUBKEY_BUF_LEN);
-
-// 	// IMPORT INTO NEW KEY
-// 	print_debug("Importing public key into new object...");
-
-// 	ecc_key key2; 
-
-// 	ret = wc_ecc_init(&key2);
-// 	if (ret != 0) {
-// 		print_debug("Could not initialize new key");
-// 		return -1;
-// 	}
-	
-// 	ret = wc_ecc_import_x963_ex(pubkey_buf, pubkey_buf_size, &key2, ECC_CURVE);
-
-//     if (ret != 0) {
-//         print_debug("Ecc import x963 failed %d\n", ret);
-//         return -1;
-//     }
-
-//     print_debug("Succesfully imported public key!");
-
-//     // VERIFY HASH
-//     print_debug("Verifying signature with imported public key...");
-
-//     int stat = -1;
-
-// 	// TEST
-// 	// sigSz = ECC_SIG_SIZE;
-
-//     ret = wc_ecc_verify_hash(sig_out, sigSz, hash_out, WC_SHA256_DIGEST_SIZE, &stat, &key2);
-
-//     if (ret != 0) {
-//         print_debug("Signature verification returned error %d\n", ret);
-//         return -1;
-//     }
-//     if (stat != 1) {
-//         print_debug("Signature verification rejected %d\n", stat);
-//         // return -1;
-//     } else {
-//     	print_debug("Signature verified successfully! ");
-//     }
-
-//     // dertest();
-
-// 	// FREE STUFF
-// 	// print_debug("'Freeing' WC_RNG and ECC key... (?)");
-// 	// wc_ecc_key_free(&key);
-// 	// ret = wc_FreeRng(&mRng);
-// 	// print_debug("WC_RNG and ECC Key 'freed' with ret %d.", ret);
-
-
-// 	return 0;
-
-// }

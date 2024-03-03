@@ -65,7 +65,7 @@ def main():
 		fp.write("#define __DEV_KEYS__\n")
 		fp.write(f"#define AP_PRIVKEY_DER {{ {to_bytearray(ap_private_key_der)} }}  \n")
 		fp.write(f"#define HOST_PUBKEY_DER {{ {to_bytearray(host_public_key_der)} }} \n")
-		fp.write(f"#define CERT_SIGNATURE {{ {to_bytearray(signature)} }} \n")
+		fp.write(f"#define AP_CERT_SIGNATURE {{ {to_bytearray(signature)} }} \n")
 		fp.write("#endif\n")
 
 
