@@ -18,7 +18,7 @@ void recv_input(const char *msg, char *buf) {
     print_debug(msg);
     fflush(0);
     print_ack();
-    #NEEDS TO BE FIXED MEMORY UNSAFE
+    //NEEDS TO BE FIXED MEMORY UNSAFE
     gets(buf);
     puts("");
 }
