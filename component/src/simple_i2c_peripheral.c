@@ -41,7 +41,15 @@ int I2C_REGS_LEN[6] = {
     [TRANSMIT_DONE] = 1,
     [TRANSMIT_LEN] = 1,
 };
+****///printing messages: 
 
+void printReceivedI2CMessage(const uint8_t* message, size_t length) {
+    printf("Message: ");
+    for (size_t i = 0; i < length; ++i) {
+        printf("%02X ", message[i]);  
+    }
+    //printf("\n"); ///if needed add
+}
 /******************************** FUNCTION PROTOTYPES ********************************/
 static void i2c_simple_isr(void);
 
