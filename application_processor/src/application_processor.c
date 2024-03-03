@@ -573,7 +573,7 @@ void attempt_boot() {
     // decrypt_aesgcm(ciphertext, BLOCK_SIZE, key, decrypted, iv, tag);
     // print_debug("Decrypted message: %s\r\n", decrypted);
 
-    // simulate_handshake();
+    simulate_handshake();
 
     #endif
 

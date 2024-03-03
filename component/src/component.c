@@ -292,7 +292,9 @@ void process_validate() {
 }
 
 int process_attest() {
-    int ret = do_handshake(&receive_buffer);
+    command_message* command = (command_message*) receive_buffer;
+
+    int ret = do_handshake(command->params);
     if (ret != 0) {
         print_error("Error doing handshake!");
         return -1; 
