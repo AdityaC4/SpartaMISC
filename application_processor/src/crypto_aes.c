@@ -18,7 +18,14 @@
  *
  * @return 0 on success, -1 on bad length, other non-zero for other error
  */
-int encrypt_aesgcm(uint8_t *plaintext, size_t len, uint8_t *key, uint8_t *ciphertext, uint8_t *iv, uint8_t *tag) {
+int encrypt_aesgcm(
+    const byte* plaintext, word32 len,
+    byte* ciphertext,
+    const byte* key, word32 key_sz,
+    const byte* iv, word32 iv_sz,
+    const byte *auth, word32 auth_sz,
+    byte* tag   // 16 byte tag buffer
+) {
     Aes ctx; // Context for encryption
     int result; // Library result
 
@@ -27,12 +34,12 @@ int encrypt_aesgcm(uint8_t *plaintext, size_t len, uint8_t *key, uint8_t *cipher
         return -1;
 
     // Set the key for encryption
-    result = wc_AesGcmSetKey(&ctx, key, KEY_SIZE);
+    result = wc_AesGcmSetKey(&ctx, key, key_sz);
     if (result != 0)
         return result; // Report error
 
     // Encrypt each block
-    result = wc_AesGcmEncrypt(&ctx, ciphertext, plaintext, len, iv, BLOCK_SIZE, tag, BLOCK_SIZE, NULL, 0);
+    result = wc_AesGcmEncrypt(&ctx, ciphertext, plaintext, len, iv, iv_sz, tag, GCM_TAG_SIZE, auth, auth_sz);
     if (result != 0)
         return result; // Report error
     return 0;
@@ -51,7 +58,14 @@ int encrypt_aesgcm(uint8_t *plaintext, size_t len, uint8_t *key, uint8_t *cipher
  *
  * @return 0 on success, -1 on bad length, other non-zero for other error
  */
-int decrypt_aesgcm(uint8_t *ciphertext, size_t len, uint8_t *key, uint8_t *plaintext, uint8_t *iv, uint8_t *tag) {
+int decrypt_aesgcm(
+    byte* plaintext, word32 len,
+    const byte* ciphertext,
+    const byte* key, word32 key_sz,
+    const byte* iv, word32 iv_sz,
+    const byte *auth, word32 auth_sz,
+    const byte* tag   // 16 byte tag buffer
+) {
     Aes ctx; // Context for decryption
     int result; // Library result
 
@@ -60,11 +74,11 @@ int decrypt_aesgcm(uint8_t *ciphertext, size_t len, uint8_t *key, uint8_t *plain
         return -1;
 
     // Set the key for decryption
-    result = wc_AesGcmSetKey(&ctx, key, KEY_SIZE);
+    result = wc_AesGcmSetKey(&ctx, key, key_sz);
     if (result != 0)
         return result; // Report error
 
-    result = wc_AesGcmDecrypt(&ctx, plaintext, ciphertext, len, iv, BLOCK_SIZE, tag, BLOCK_SIZE, NULL, 0);
+    result = wc_AesGcmDecrypt(&ctx, plaintext, ciphertext, len, iv, iv_sz, tag, GCM_TAG_SIZE, auth, auth_sz);
     if (result != 0)
         return result; // Report error
     return 0;

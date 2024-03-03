@@ -99,6 +99,23 @@ typedef enum {
     COMPONENT_CMD_ATTEST
 } component_cmd_t;
 
+// Datatype for an active encrypted session with a component
+typedef struct {
+    word32 component_id;
+    int active; 
+    byte key[SHARED_KEY_SIZE];
+    word32 sendCounter;
+    word32 receiveCounter;
+} component_session;
+
+// Struct for storing auth tags
+typedef struct {
+    byte iv[GCM_IV_SIZE];
+    word32 counter; 
+} message_auth;
+
+component_session sessions[COMPONENT_CNT];
+
 /********************************* GLOBAL VARIABLES **********************************/
 // Variable for information stored in flash memory
 flash_entry flash_status;
@@ -187,6 +204,17 @@ void init() {
     
     // Initialize board link interface
     board_link_init();
+
+    // Initialize sessions array
+    uint32_t component_ids[COMPONENT_CNT] = {COMPONENT_IDS};
+    for (int i = 0; i < COMPONENT_CNT; ++i) {
+        component_session* session = &(sessions[i]);
+        session->component_id = (word32) component_ids[i];
+        session->active = 0;
+        bzero(session->key, SHARED_KEY_SIZE);
+        session->sendCounter = 0;
+        session->receiveCounter = 0;
+    }
 }
 
 // Send a command to a component and receive the result
@@ -354,6 +382,7 @@ int do_handshake(uint32_t component_id, uint8_t initial_command) {
     send_packet(addr, sizeof(ap_sc), (uint8_t *)&ap_sc);
 
     // The handshake finishes here, the AP can then poll for a data packet from component
+    return 0;
 }
 
 int scan_components() {
@@ -536,46 +565,49 @@ int validate_token() {
 void attempt_boot() {
     #ifdef CRYPTO_EXAMPLE
 
-    // // This string is 16 bytes long including null terminator
-    // // This is the block size of included symmetric encryption
-    // char* data = "Crypto Example!";
+    // This string is 16 bytes long including null terminator
+    // This is the block size of included symmetric encryption
+    char* data = "Crypto Example!";
 
-    // // Print crypto example
-    // print_debug("Original Data: %s\r\n", (uint8_t*)data);
+    // Print crypto example
+    print_debug("Original Data: %s\r\n", (uint8_t*)data);
 
-    // uint8_t ciphertext[BLOCK_SIZE];
-    // uint8_t key[KEY_SIZE];
+    byte ciphertext[BLOCK_SIZE];
 
-    // uint8_t iv[BLOCK_SIZE]; // IV for GCM mode
-    // uint8_t tag[BLOCK_SIZE]; // Tag for GCM mode
+    byte key[SHARED_KEY_SIZE];
+    // Zero out the key
+    bzero(key, SHARED_KEY_SIZE);
 
-    // wc_GenerateSeed(NULL, iv, BLOCK_SIZE); // Initialize IV value using MXC TRNG 
-    // wc_GenerateSeed(NULL, tag, BLOCK_SIZE); // Initialize Tag value MXC TRNG
+    // IV for GCM mode
+    byte iv[GCM_IV_SIZE];
+    wc_GenerateSeed(NULL, iv, GCM_IV_SIZE); // Initialize IV value using MXC TRNG 
 
-    // // Prepare message headers (iv + tag)
-    // byte header[2*BLOCK_SIZE];
-    // memset(header, 0, sizeof(header));
-    // memcpy(header, iv, BLOCK_SIZE);
-    // memcpy(header[BLOCK_SIZE], tag, BLOCK_SIZE);
+    // Tag for GCM mode - has to be GCM_TAG_SIZE
+    byte tag[GCM_TAG_SIZE];
+    bzero(tag, GCM_TAG_SIZE);
 
-    // // Zero out the key
-    // bzero(key, BLOCK_SIZE);
+    message_auth auth;
+    memcpy(auth.iv, iv, GCM_IV_SIZE);
+    auth.counter = 0;
 
-    // // Encrypt example data and print out
-    // encrypt_aesgcm((uint8_t*)data, BLOCK_SIZE, key, ciphertext, iv, tag); 
-    // print_debug("Encrypted data: ");
-    // print_hex_debug(ciphertext, BLOCK_SIZE);
+    // Encrypt example data and print out
+    int ret = encrypt_aesgcm(data, BLOCK_SIZE, ciphertext, key, SHARED_KEY_SIZE, iv, GCM_IV_SIZE, &auth, sizeof(auth), &tag); 
+    if (ret != 0) {
+        print_debug("Failed to encrypt message: error code %d", ret);
+    }
 
-    // // Receive IV + Tag
-    // memcpy(iv, header, BLOCK_SIZE);
-    // memcpy(tag, header[BLOCK_SIZE], BLOCK_SIZE);
+    print_debug("Encrypted data: ");
+    print_hex_debug(ciphertext, BLOCK_SIZE);
 
-    // // Decrypt the encrypted message and print out
-    // uint8_t decrypted[BLOCK_SIZE];
-    // decrypt_aesgcm(ciphertext, BLOCK_SIZE, key, decrypted, iv, tag);
-    // print_debug("Decrypted message: %s\r\n", decrypted);
+    // Decrypt the encrypted message and print out
+    byte decrypted[BLOCK_SIZE];
+    ret = decrypt_aesgcm(decrypted, BLOCK_SIZE, ciphertext, key, SHARED_KEY_SIZE, auth.iv, GCM_IV_SIZE, &auth, sizeof(auth), &tag);
+    if (ret != 0) {
+        print_debug("Failed to decrypt message: error code %d", ret);
+    }
+    print_debug("Decrypted message: %s\r\n", decrypted);
 
-    simulate_handshake();
+    // simulate_handshake();
 
     #endif
 

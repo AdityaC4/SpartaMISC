@@ -6,6 +6,8 @@
 /******************************** MACRO DEFINITIONS ********************************/
 #define BLOCK_SIZE AES_BLOCK_SIZE
 #define KEY_SIZE 32
+#define GCM_TAG_SIZE 16
+#define GCM_IV_SIZE 12
 
 /******************************** FUNCTION PROTOTYPES ********************************/
 /** @brief Encrypts plaintext using a symmetric cipher
@@ -21,7 +23,14 @@
  *
  * @return 0 on success, -1 on bad length, other non-zero for other error
  */
-int encrypt_aesgcm(uint8_t *plaintext, size_t len, uint8_t *key, uint8_t *ciphertext, uint8_t *iv, uint8_t *tag);
+int encrypt_aesgcm(
+    const byte* plaintext, word32 len,
+    byte* ciphertext,
+    const byte* key, word32 key_sz,
+    const byte* iv, word32 iv_sz,
+    const byte *auth, word32 auth_sz,
+    byte* tag   // 16 byte tag buffer
+);
 
 /** @brief Decrypts ciphertext using a symmetric cipher
  *
@@ -36,6 +45,13 @@ int encrypt_aesgcm(uint8_t *plaintext, size_t len, uint8_t *key, uint8_t *cipher
  *
  * @return 0 on success, -1 on bad length, other non-zero for other error
  */
-int decrypt_aesgcm(uint8_t *ciphertext, size_t len, uint8_t *key, uint8_t *plaintext, uint8_t *iv, uint8_t *tag);
+int decrypt_aesgcm(
+    byte* plaintext, word32 len,
+    const byte* ciphertext,
+    const byte* key, word32 key_sz,
+    const byte* iv, word32 iv_sz,
+    const byte *auth, word32 auth_sz,
+    const byte* tag   // 16 byte tag buffer
+);
 
 #endif
