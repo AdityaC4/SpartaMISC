@@ -135,7 +135,9 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
  * This function must be implemented by your team to align with the security requirements.
 */
 int secure_receive(i2c_addr_t address, uint8_t* buffer) {
-    return poll_and_receive_packet(address, buffer);
+    int ret = poll_and_receive_packet(address, buffer);
+    if (ret < 0) return ret;
+    return MAX_I2X_MESSAGE_LEN;
 }
 
 /**
