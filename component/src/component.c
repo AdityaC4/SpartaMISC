@@ -196,8 +196,17 @@ void process_validate() {
 }
 
 void process_attest() {
+    uint8_t len = sprintf((char*) transmit_buffer, "This is the first message from comp\n");
+    send_packet_and_ack(len, transmit_buffer);
+
+    len = sprintf((char*) transmit_buffer, "This is the second message from comp\n");
+    send_packet_and_ack(len, transmit_buffer);
+
+    // Wait for second message from OP
+    wait_and_receive_packet(receive_buffer);
+
     // The AP requested attestation. Respond with the attestation data
-    uint8_t len = sprintf((char*)transmit_buffer, "LOC>%s\nDATE>%s\nCUST>%s\n",
+    len = sprintf((char*)transmit_buffer, "LOC>%s\nDATE>%s\nCUST>%s\n",
                 ATTESTATION_LOC, ATTESTATION_DATE, ATTESTATION_CUSTOMER) + 1;
     send_packet_and_ack(len, transmit_buffer);
 }

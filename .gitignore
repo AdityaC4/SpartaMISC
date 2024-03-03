@@ -1,5 +1,8 @@
 ## Project .gitignore ##
 
+application_processor/wolfssl
+component/wolfssl
+
 .DS_Store
 .vscode/
 **/gcc

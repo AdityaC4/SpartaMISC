@@ -300,6 +300,7 @@ int boot_components() {
 int attest_component(uint32_t component_id) {
     // Buffers for board link communication
     uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
+    uint8_t receive_buffer2[MAX_I2C_MESSAGE_LEN];
     uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 
     // Set the I2C address of the component
@@ -310,15 +311,58 @@ int attest_component(uint32_t component_id) {
     command->opcode = COMPONENT_CMD_ATTEST;
 
     // Send out command and receive result
-    int len = issue_cmd(addr, transmit_buffer, receive_buffer);
+    // int len = issue_cmd(addr, transmit_buffer, receive_buffer);
+    // if (len == ERROR_RETURN) {
+    //     print_error("Could not attest component\n");
+    //     return ERROR_RETURN;
+    // }
+
+    print_debug("Sending 1st packet to component");
+
+    // Send attest command
+    int result = send_packet(addr, sizeof(uint8_t), transmit_buffer);
+    if (result == ERROR_RETURN) {
+        print_error("Could not send 1st packet to component");
+        return ERROR_RETURN;
+    }
+    
+    // Receive first response
+    int len = poll_and_receive_packet(addr, receive_buffer);
     if (len == ERROR_RETURN) {
-        print_error("Could not attest component\n");
+        print_error("Could not receive first response from component");
+        return ERROR_RETURN;
+    }
+    print_debug("Received first response from component");
+    print_info("%.*s", len, receive_buffer);
+
+    // Receive second response
+    len = poll_and_receive_packet(addr, receive_buffer2);
+    if (len == ERROR_RETURN) {
+        print_error("Could not receive first response from component");
+        return ERROR_RETURN;
+    }
+    print_debug("Received second response from component");
+    print_info("%.*s", len, receive_buffer2);
+
+    // Send back another message
+    result = send_packet(addr, sizeof(uint8_t), transmit_buffer);
+    if (result == ERROR_RETURN) {
+        print_error("Could not send 1st packet to component");
         return ERROR_RETURN;
     }
 
-    // Print out attestation data 
-    print_info("C>0x%08x\n", component_id);
+    // Receive final response
+    len = poll_and_receive_packet(addr, receive_buffer);
+    if (len == ERROR_RETURN) {
+        print_error("Could not receive final response from component");
+        return ERROR_RETURN;
+    }
+    print_debug("Received final response from component");
     print_info("%s", receive_buffer);
+
+    // Print out attestation data 
+    // print_info("C>0x%08x\n", component_id);
+    // print_info("%s", receive_buffer);
     return SUCCESS_RETURN;
 }
 
