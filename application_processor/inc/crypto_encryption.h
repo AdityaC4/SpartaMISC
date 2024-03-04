@@ -1,13 +1,11 @@
-#ifndef ECTF_CRYPTO_AES
-#define ECTF_CRYPTO_AES
+#ifndef ECTF_CRYPTO_CHACHA
+#define ECTF_CRYPTO_CHACHA
 
-#include "wolfssl/wolfcrypt/aes.h"
+#include "wolfssl/wolfcrypt/chacha20_poly1305.h"
 
 /******************************** MACRO DEFINITIONS ********************************/
-#define BLOCK_SIZE AES_BLOCK_SIZE
-#define KEY_SIZE 32
-#define GCM_TAG_SIZE 16
-#define GCM_IV_SIZE 12
+#define CHACHA_IV_SIZE 12
+#define CHACHA_TAG_SIZE 16
 
 /******************************** FUNCTION PROTOTYPES ********************************/
 /** @brief Encrypts plaintext using a symmetric cipher
@@ -23,11 +21,11 @@
  *
  * @return 0 on success, -1 on bad length, other non-zero for other error
  */
-int encrypt_aesgcm(
+int encrypt(
     const byte* plaintext, word32 len,
     byte* ciphertext,
-    const byte* key, word32 key_sz,
-    const byte* iv, word32 iv_sz,
+    const byte* key,
+    const byte* iv,
     const byte *auth, word32 auth_sz,
     byte* tag   // 16 byte tag buffer
 );
@@ -45,11 +43,11 @@ int encrypt_aesgcm(
  *
  * @return 0 on success, -1 on bad length, other non-zero for other error
  */
-int decrypt_aesgcm(
+int decrypt(
     byte* plaintext, word32 len,
     const byte* ciphertext,
-    const byte* key, word32 key_sz,
-    const byte* iv, word32 iv_sz,
+    const byte* key,
+    const byte* iv,
     const byte *auth, word32 auth_sz,
     const byte* tag   // 16 byte tag buffer
 );

@@ -29,7 +29,7 @@
 #include "host_messaging.h"
 #ifdef CRYPTO_EXAMPLE
 // Include custom crypto test
-#include "crypto_aes.h"
+#include "crypto_encryption.h"
 #include "crypto_test.h"
 #include "wolfssl/wolfcrypt/random.h"
 #endif
@@ -104,21 +104,25 @@ typedef struct {
     word32 component_id;
     int active; 
     byte key[SHARED_KEY_SIZE];
-    word32 sendCounter;
-    word32 receiveCounter;
+    word32 send_counter;
+    word32 receive_counter;
 } component_session;
 
 // Struct for storing auth tags
 typedef struct {
-    byte iv[GCM_IV_SIZE];
+    byte iv[CHACHA_IV_SIZE];
+    byte tag[CHACHA_TAG_SIZE];
     word32 counter; 
+    uint8_t length; 
 } message_auth;
-
-component_session sessions[COMPONENT_CNT];
 
 /********************************* GLOBAL VARIABLES **********************************/
 // Variable for information stored in flash memory
 flash_entry flash_status;
+
+// Active sessions with components
+component_session sessions[COMPONENT_CNT];
+
 
 /********************************* REFERENCE FLAG **********************************/
 // trust me, it's easier to get the boot reference flag by
@@ -140,7 +144,64 @@ typedef uint32_t aErjfkdfru;const aErjfkdfru aseiFuengleR[]={0x1ffe4b6,0x3098ac,
 
 */
 int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
-    return send_packet(address, len, buffer);
+    byte send_buf[len];
+    bzero(send_buf, sizeof(send_buf));
+
+    component_session* session = NULL; 
+    for (int i = 0; i < COMPONENT_CNT; ++i) {
+        if (component_id_to_i2c_addr(sessions[i].component_id) == address) {
+            session = &(sessions[i]);
+        }
+    }
+    if (!session) {
+        print_debug("Could not find a component with matching address!");
+        return -1;
+    }
+    if (session->active != 1) {
+        print_debug("Session is not active!");
+        return -1;
+    }
+
+    // IV 
+    byte iv[CHACHA_IV_SIZE];
+    wc_GenerateSeed(NULL, iv, CHACHA_IV_SIZE); // Initialize IV value using MXC TRNG 
+
+    // Tag 
+    byte tag[CHACHA_TAG_SIZE];
+    bzero(tag, CHACHA_TAG_SIZE);
+
+    message_auth auth;
+
+    // Store IV
+    memcpy(auth.iv, iv, CHACHA_IV_SIZE);
+
+    session->send_counter++;
+    auth.counter = session->send_counter;
+    auth.length = len;
+
+    // Encrypt data
+    int ret = encrypt((byte* ) buffer, len, send_buf, session->key, iv, (byte *) &(auth.counter), sizeof(auth.counter), tag); 
+    if (ret != 0) {
+        print_debug("Failed to encrypt message: error code %d", ret);
+    }
+
+    // Store tag
+    memcpy(auth.tag, tag, sizeof(tag));
+
+    // Send encrypted data
+    ret = send_packet(address, len, buffer);
+    if (ret < SUCCESS_RETURN) {
+        print_debug("Error sending encrypted packet");
+        return ret;
+    }
+
+    // Send IV and authentication data
+    ret = send_packet(address, sizeof(auth), (byte *) &auth);
+    if (ret < SUCCESS_RETURN) {
+        print_debug("Error sending authenticated data");
+    }
+
+    return ret;
 }
 
 /**
@@ -155,7 +216,52 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
  * This function must be implemented by your team to align with the security requirements.
 */
 int secure_receive(i2c_addr_t address, uint8_t* buffer) {
-    return poll_and_receive_packet(address, buffer);
+    byte data_buf[MAX_I2C_MESSAGE_LEN-1];
+    byte auth_buf[MAX_I2C_MESSAGE_LEN-1];
+
+    component_session* session = NULL; 
+    for (int i = 0; i < COMPONENT_CNT; ++i) {
+        if (component_id_to_i2c_addr(sessions[i].component_id) == address) {
+            session = &(sessions[i]);
+        }
+    }
+    if (!session) {
+        print_debug("Could not find a component with matching address!");
+        return -1;
+    }
+    if (session->active != 1) {
+        print_debug("Session is not active!");
+        return -1;
+    }
+
+    int ret = poll_and_receive_packet(address, data_buf);
+    if (ret < SUCCESS_RETURN) {
+        print_debug("Error polling for first packet");
+        return ret;
+    }
+
+    ret = poll_and_receive_packet(address, auth_buf);
+    if (ret < SUCCESS_RETURN) {
+        print_debug("Error polling for second packet");
+        return ret;
+    }
+
+    message_auth auth;
+    memcpy(&auth, auth_buf, sizeof(auth));
+
+    if (auth.counter <= session->receive_counter) {
+        print_debug("Error! counter was less than receive counter");
+        return ERROR_RETURN;
+    }
+
+    ret = decrypt((byte* ) buffer, auth.length, data_buf, session->key, auth.iv, (byte *) &(auth.counter), sizeof(auth.counter), auth.tag); 
+    if (ret != 0) {
+        print_debug("Error decrypting message");
+        return ERROR_RETURN;
+    }
+
+    session->receive_counter = auth.counter;
+    return auth.length;
 }
 
 /**
@@ -212,8 +318,8 @@ void init() {
         session->component_id = (word32) component_ids[i];
         session->active = 0;
         bzero(session->key, SHARED_KEY_SIZE);
-        session->sendCounter = 0;
-        session->receiveCounter = 0;
+        session->send_counter = 0;
+        session->receive_counter = 0;
     }
 }
 
@@ -381,8 +487,41 @@ int do_handshake(uint32_t component_id, uint8_t initial_command) {
 
     send_packet(addr, sizeof(ap_sc), (uint8_t *)&ap_sc);
 
-    // The handshake finishes here, the AP can then poll for a data packet from component
-    return 0;
+    // Poll for ackowledgement packet to complete handshake
+    len = poll_and_receive_packet(addr, receive_buffer);
+    if (len == ERROR_RETURN) {
+        print_debug("Error while polling for done packet");
+    }
+    char done[] = "done";
+    if (strncmp((char *) receive_buffer, done, sizeof(done)) == 0) {
+        // Handshake done 
+        int i;
+        int session_made = 0;
+        for (i = 0; i < COMPONENT_CNT; ++i) {
+            component_session* s = &(sessions[i]);
+            if (s->component_id == (word32) component_id) {
+                s->active = 1;
+                memcpy(s->key, ap_shared_key, SHARED_KEY_SIZE);
+                s->send_counter = 0;
+                s->receive_counter = 0;
+
+                session_made = 1;
+            }
+        }
+
+        if (session_made != 1) {
+            print_debug("Could not find session for component id");
+            return -1; 
+        }
+
+        print_debug("Leaving do_handshake()");
+
+        // The AP can then poll for a data packet from component through secure_receive
+        return 0;
+    } else {
+        print_debug("Component did not send valid done message");
+        return -1;
+    }
 }
 
 int scan_components() {
@@ -495,7 +634,8 @@ int attest_component(uint32_t component_id) {
     i2c_addr_t addr = component_id_to_i2c_addr(component_id);
 
     // Now component will respond with the requested data
-    int len = poll_and_receive_packet(addr, receive_buffer);
+    // int len = poll_and_receive_packet(addr, receive_buffer);
+    int len = secure_receive(addr, receive_buffer);
     if (len == ERROR_RETURN) {
         print_error("Error in receiving data packet from component");
         return ERROR_RETURN;
@@ -565,44 +705,44 @@ int validate_token() {
 void attempt_boot() {
     #ifdef CRYPTO_EXAMPLE
 
-    // This string is 16 bytes long including null terminator
-    // This is the block size of included symmetric encryption
-    char* data = "Crypto Example!";
+    char data[] = "Crypto Example! More text";
 
     // Print crypto example
-    print_debug("Original Data: %s\r\n", (uint8_t*)data);
+    print_debug("Original Data: %s\r\n", (uint8_t *)data);
 
-    byte ciphertext[BLOCK_SIZE];
+    byte ciphertext[sizeof(data)];
 
     byte key[SHARED_KEY_SIZE];
     // Zero out the key
     bzero(key, SHARED_KEY_SIZE);
 
-    // IV for GCM mode
-    byte iv[GCM_IV_SIZE];
-    wc_GenerateSeed(NULL, iv, GCM_IV_SIZE); // Initialize IV value using MXC TRNG 
+    // IV 
+    byte iv[CHACHA_IV_SIZE];
+    wc_GenerateSeed(NULL, iv, CHACHA_IV_SIZE); // Initialize IV value using MXC TRNG
 
-    // Tag for GCM mode - has to be GCM_TAG_SIZE
-    byte tag[GCM_TAG_SIZE];
-    bzero(tag, GCM_TAG_SIZE);
+    // Tag 
+    byte tag[CHACHA_TAG_SIZE];
+    bzero(tag, CHACHA_TAG_SIZE);
 
     message_auth auth;
-    memcpy(auth.iv, iv, GCM_IV_SIZE);
+    memcpy(auth.iv, iv, CHACHA_IV_SIZE);
     auth.counter = 0;
 
     // Encrypt example data and print out
-    int ret = encrypt_aesgcm(data, BLOCK_SIZE, ciphertext, key, SHARED_KEY_SIZE, iv, GCM_IV_SIZE, &auth, sizeof(auth), &tag); 
-    if (ret != 0) {
+    int ret = encrypt((byte *)data, sizeof(data), ciphertext, key, iv, (byte *)&auth, sizeof(auth), tag);
+    if (ret != 0)
+    {
         print_debug("Failed to encrypt message: error code %d", ret);
     }
 
     print_debug("Encrypted data: ");
-    print_hex_debug(ciphertext, BLOCK_SIZE);
+    print_hex_debug(ciphertext, sizeof(data));
 
     // Decrypt the encrypted message and print out
-    byte decrypted[BLOCK_SIZE];
-    ret = decrypt_aesgcm(decrypted, BLOCK_SIZE, ciphertext, key, SHARED_KEY_SIZE, auth.iv, GCM_IV_SIZE, &auth, sizeof(auth), &tag);
-    if (ret != 0) {
+    byte decrypted[sizeof(data)];
+    ret = decrypt(decrypted, sizeof(data), ciphertext, key, auth.iv, (byte *)&auth, sizeof(auth), tag);
+    if (ret != 0)
+    {
         print_debug("Failed to decrypt message: error code %d", ret);
     }
     print_debug("Decrypted message: %s\r\n", decrypted);

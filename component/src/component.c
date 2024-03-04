@@ -28,6 +28,7 @@
 #include "ectf_params.h"
 #include "global_secrets.h"
 
+#include "crypto_encryption.h"
 #include "crypto_test.h"
 
 #ifdef POST_BOOT
@@ -74,6 +75,21 @@ typedef struct {
     uint32_t component_id;
 } scan_message;
 
+// Datatype for an active encrypted session with an AP
+typedef struct {
+    int active; 
+    byte key[SHARED_KEY_SIZE];
+    word32 send_counter;
+    word32 receive_counter;
+} ap_session;
+
+typedef struct {
+    byte iv[CHACHA_IV_SIZE];
+    byte tag[CHACHA_TAG_SIZE];
+    word32 counter; 
+    uint8_t length; 
+} message_auth;
+
 /********************************* FUNCTION DECLARATIONS **********************************/
 // Core function definitions
 void component_process_cmd(void);
@@ -87,6 +103,8 @@ int process_attest(void);
 uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
 uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 
+ap_session session;
+
 /******************************* POST BOOT FUNCTIONALITY *********************************/
 /**
  * @brief Secure Send 
@@ -98,7 +116,45 @@ uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
  * This function must be implemented by your team to align with the security requirements.
 */
 void secure_send(uint8_t* buffer, uint8_t len) {
-    send_packet_and_ack(len, buffer); 
+    byte send_buf[len];
+    bzero(send_buf, sizeof(send_buf));
+
+    if (session.active != 1) {
+        print_debug("Session is not active!");
+        return;
+    }
+
+    // IV 
+    byte iv[CHACHA_IV_SIZE];
+    wc_GenerateSeed(NULL, iv, CHACHA_IV_SIZE); // Initialize IV value using MXC TRNG 
+
+    // Tag 
+    byte tag[CHACHA_TAG_SIZE];
+    bzero(tag, CHACHA_TAG_SIZE);
+
+    message_auth auth;
+
+    // Store IV
+    memcpy(auth.iv, iv, CHACHA_IV_SIZE);
+
+    session.send_counter++;
+    auth.counter = session.send_counter;
+    auth.length = len;
+
+    // Encrypt data
+    int ret = encrypt((byte* ) buffer, len, send_buf, session.key, iv, (byte *) &(auth.counter), sizeof(auth.counter), tag); 
+    if (ret != 0) {
+        print_debug("Failed to encrypt message: error code %d", ret);
+    }
+
+    // Store tag
+    memcpy(auth.tag, tag, sizeof(tag));
+
+    // Send encrypted data
+    send_packet_and_ack(len, buffer);
+
+    // Send IV and authentication data
+    send_packet_and_ack(sizeof(auth), (byte *) &auth);
 }
 
 /**
@@ -112,7 +168,42 @@ void secure_send(uint8_t* buffer, uint8_t len) {
  * This function must be implemented by your team to align with the security requirements.
 */
 int secure_receive(uint8_t* buffer) {
-    return wait_and_receive_packet(buffer);
+    byte data_buf[MAX_I2C_MESSAGE_LEN-1];
+    byte auth_buf[MAX_I2C_MESSAGE_LEN-1];
+
+    if (session.active != 1) {
+        print_debug("Session not active!");
+        return -1;
+    }
+
+    int ret = wait_and_receive_packet(data_buf);
+    if (ret < SUCCESS_RETURN) {
+        print_debug("Error polling for first packet");
+        return ret;
+    }
+
+    ret = wait_and_receive_packet(auth_buf);
+    if (ret < SUCCESS_RETURN) {
+        print_debug("Error polling for second packet");
+        return ret;
+    }
+
+    message_auth auth;
+    memcpy(&auth, auth_buf, sizeof(auth));
+
+    if (auth.counter <= session.receive_counter) {
+        print_debug("Error! counter was less than receive counter");
+        return ERROR_RETURN;
+    }
+
+    ret = decrypt((byte* ) buffer, auth.length, data_buf, session.key, auth.iv, (byte *) &(auth.counter), sizeof(auth.counter), auth.tag); 
+    if (ret != 0) {
+        print_debug("Error decrypting message");
+        return ERROR_RETURN;
+    }
+
+    session.receive_counter = auth.counter;
+    return auth.length;
 }
 
 /******************************* FUNCTION DEFINITIONS *********************************/
@@ -209,7 +300,22 @@ int do_handshake(byte* hello_buffer) {
 
     print_debug("Component successfully verified AP challenge signature");
     
-    // Handshake is done - component can now send back a confirmation or requested data
+    // Send done message to complete handshake 
+    print_debug("Sending done message");
+
+    char done[] = "done";
+    bzero(transmit_buffer, MAX_I2C_MESSAGE_LEN);
+    memcpy(transmit_buffer, done, sizeof(done));
+    send_packet_and_ack((uint8_t) sizeof(done), transmit_buffer);
+
+    // Create session
+    session.active = 1;
+    memcpy(session.key, comp_shared_key, SHARED_KEY_SIZE);
+    session.send_counter = 0;
+    session.receive_counter = 0;
+
+    print_debug("Leaving do_handshake()");
+
     return 0;
 }
 
@@ -305,7 +411,9 @@ int process_attest() {
     // The AP requested attestation. Respond with the attestation data
     uint8_t len = sprintf((char*)transmit_buffer, "LOC>%s\nDATE>%s\nCUST>%s\n",
                 ATTESTATION_LOC, ATTESTATION_DATE, ATTESTATION_CUSTOMER) + 1;
-    send_packet_and_ack(len, transmit_buffer);
+
+    // send_packet_and_ack(len, transmit_buffer);
+    secure_send(transmit_buffer, len);
     
     return 0;
 }
