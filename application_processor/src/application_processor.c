@@ -60,6 +60,10 @@
 #define SUCCESS_RETURN 0
 #define ERROR_RETURN -1
 
+// Sizes of token and pin in bytes
+#define AP_PIN_LEN 6
+#define AP_TOKEN_LEN 16
+
 /******************************** TYPE DEFINITIONS ********************************/
 // Data structure for sending commands to component
 // Params allows for up to MAX_I2C_MESSAGE_LEN - 1 bytes to be send
@@ -200,6 +204,21 @@ int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
         return ERROR_RETURN;
     }
     return len;
+}
+
+
+// Compare two buffers with no time leakage
+int secure_cmp(char * buf, char * passcode, int len) {
+    // Similar to strcmp, if it's sucessful it returns 0
+    int success = 0;
+
+    for (int i = 0; i < len; i++) {
+        if (buf[i] != passcode[i])
+        {
+            success = 1;
+        }
+    }
+    return success;
 }
 
 /******************************** COMPONENT COMMS ********************************/
@@ -384,9 +403,9 @@ void boot() {
 
 // Compare the entered PIN to the correct PIN
 int validate_pin() {
-    char buf[50];
+    char buf[AP_PIN_LEN];
     recv_input("Enter pin: ", buf);
-    if (!strcmp(buf, AP_PIN)) {
+    if (!secure_cmp(buf, AP_PIN, AP_PIN_LEN)) {
         print_debug("Pin Accepted!\n");
         return SUCCESS_RETURN;
     }
@@ -396,9 +415,9 @@ int validate_pin() {
 
 // Function to validate the replacement token
 int validate_token() {
-    char buf[50];
+    char buf[AP_TOKEN_LEN];
     recv_input("Enter token: ", buf);
-    if (!strcmp(buf, AP_TOKEN)) {
+    if (!secure_cmp(buf, AP_TOKEN, AP_TOKEN_LEN)) {
         print_debug("Token Accepted!\n");
         return SUCCESS_RETURN;
     }
@@ -408,6 +427,16 @@ int validate_token() {
 
 // Boot the components and board if the components validate
 void attempt_boot() {
+    char buf1[AP_TOKEN_LEN];
+    memset(buf1, 0, AP_TOKEN_LEN);
+    char buf2[AP_TOKEN_LEN];
+    memset(buf2, 1, AP_TOKEN_LEN);
+
+    print_debug("Secure cmp buf1 = 0, buf2 = 0 (should be True): %d\n", secure_cmp(buf1, buf1, AP_TOKEN_LEN));
+    print_debug("Secure cmp buf1 = 0, buf2 = 1 (should be False): %d\n", secure_cmp(buf1, buf2, AP_TOKEN_LEN));
+    print_debug("Secure cmp buf1 = 0, buf2 = AP_TOKEN (should be False): %d\n", secure_cmp(buf1, AP_TOKEN, AP_TOKEN_LEN));
+    print_debug("Secure cmp buf1 = AP_TOKEN, buf2 = AP_TOKEN (should be True): %d\n", secure_cmp(AP_TOKEN, AP_TOKEN, AP_TOKEN_LEN));
+
     if (validate_components()) {
         print_error("Components could not be validated\n");
         return;
