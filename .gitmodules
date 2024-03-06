@@ -1,8 +1,3 @@
-[submodule "application-processor/wolfssl"]
-	path = application-processor/wolfssl
-	url = https://github.com/wolfSSL/wolfssl.git
-	ignore = dirty
-
 [submodule "component/wolfssl"]
 	path = component/wolfssl
 	url = https://github.com/wolfSSL/wolfssl.git
