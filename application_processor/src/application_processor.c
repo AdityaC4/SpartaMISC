@@ -387,7 +387,7 @@ int validate_pin() {
     char buf[50];
     recv_input("Enter pin: ", buf);
     // neesd to be fixed memory unsafe
-    if (!strcmp(buf, AP_PIN)) {
+    if (!strncmp(buf, AP_PIN, 6)) {
         print_debug("Pin Accepted!\n");
         return SUCCESS_RETURN;
     }
@@ -400,7 +400,7 @@ int validate_token() {
     char buf[50];
     recv_input("Enter token: ", buf);
     // needs to be fixed memory unsafe
-    if (!strcmp(buf, AP_TOKEN)) {
+    if (!strncmp(buf, AP_TOKEN, 8)) {
         print_debug("Token Accepted!\n");
         return SUCCESS_RETURN;
     }
