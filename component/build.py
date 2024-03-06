@@ -14,17 +14,17 @@ def main():
     header_path = header_dir / "ectf_keys.h" 
 
     # Get component ID
-    component_id = 0
+    component_id = -1
+
     ectf_params_path = header_dir / "ectf_params.h"
-    regex = re.compile('#define COMPONENT_ID ([1-9]*)')
+    regex = re.compile(r"#define COMPONENT_ID\s*(.*)\s")
     with open(ectf_params_path, "r") as f:
         data = f.read()
         match = re.search(r'#define\s+COMPONENT_ID\s+(\d+)', data)
         if match:
-            component_id = int(match.group(1))
+            component_id = int(match.group(1), 0)
         else:
-            print("Error getting component ID from header file!")
-            exit(1)
+            raise Exception("Could not parse component id from header!");
 
     print(f"EXTRACTED COMPONENT ID {component_id}")
 
