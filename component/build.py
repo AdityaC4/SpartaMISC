@@ -27,6 +27,7 @@ def main():
 
         match = regex.search(data)
         if match:
+            print(f"Matched component ID string: {match.group(1)}")
             component_id = int(match.group(1), 0)
         else:
             raise Exception("Could not parse component id from header!");
