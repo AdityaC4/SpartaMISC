@@ -42,6 +42,7 @@ ENTRY=firmware_startup
 CRYPTO_EXAMPLE=1
 
 ectf_prebuild_comp:
+	ls # debugging
 	cp ../patch/random.c wolfssl/wolfcrypt/src/random.c
 	poetry install
 	poetry run python build.py # runs registered build.py script
