@@ -22,10 +22,10 @@ def main():
         data = f.read()
 
         # debugging
-        print("HEADER CONTENTS")
-        print(data)
+        # print("HEADER CONTENTS")
+        # print(data)
 
-        match = re.search(r'#define\s+COMPONENT_ID\s+(\d+)', data)
+        match = regex.search(data)
         if match:
             component_id = int(match.group(1), 0)
         else:
