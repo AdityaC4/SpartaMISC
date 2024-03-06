@@ -3,5 +3,5 @@
 	url = https://github.com/wolfSSL/wolfssl
 
 [submodule "component/wolfssl"]
-	path = application_processor/wolfssl
+	path = component/wolfssl
 	url = https://github.com/wolfSSL/wolfssl
