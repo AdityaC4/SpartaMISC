@@ -151,7 +151,7 @@ void secure_send(uint8_t* buffer, uint8_t len) {
     memcpy(auth.tag, tag, sizeof(tag));
 
     // Send encrypted data
-    send_packet_and_ack(len, buffer);
+    send_packet_and_ack(len, send_buf);
 
     // Send IV and authentication data
     send_packet_and_ack(sizeof(auth), (byte *) &auth);
