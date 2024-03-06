@@ -2,8 +2,8 @@
 
 #custom
 #ignore wolfssl for now
-application_processor/wolfssl/
-component/wolfssl/
+# application_processor/wolfssl/
+# component/wolfssl/
 
 application_processor/inc/ectf_keys.h
 component/inc/ectf_keys.h

@@ -1,7 +1,7 @@
-[submodule "application_processor/wolfssl"]
-	path = application_processor/wolfssl
-	url = https://github.com/wolfSSL/wolfssl
+[submodule "application-processor/wolfssl"]
+	path = application-processor/wolfssl
+	url = https://github.com/wolfSSL/wolfssl.git
 
 [submodule "component/wolfssl"]
 	path = component/wolfssl
-	url = https://github.com/wolfSSL/wolfssl
+	url = https://github.com/wolfSSL/wolfssl.git
