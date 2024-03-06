@@ -20,6 +20,11 @@ def main():
     regex = re.compile(r"#define COMPONENT_ID\s*(.*)\s")
     with open(ectf_params_path, "r") as f:
         data = f.read()
+
+        # debugging
+        print("HEADER CONTENTS")
+        print(data)
+
         match = re.search(r'#define\s+COMPONENT_ID\s+(\d+)', data)
         if match:
             component_id = int(match.group(1), 0)

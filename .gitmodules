@@ -2,3 +2,8 @@
 	path = component/wolfssl
 	url = https://github.com/wolfSSL/wolfssl.git
 	ignore = dirty
+
+[submodule "application_processor/wolfssl"]
+	path = application_processor/wolfssl
+	url = https://github.com/wolfSSL/wolfssl.git
+	ignore = dirty
