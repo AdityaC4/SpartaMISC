@@ -436,7 +436,7 @@ int do_handshake(uint32_t component_id, uint8_t initial_command) {
                        COMPONENT_ID, &loaded_comp_pubkey);
     if (ret != 0)
     {
-        print_debug("Failed to verify component hello");
+        print_error("Failed to verify component hello");
         return -1;
     }
 
@@ -446,7 +446,7 @@ int do_handshake(uint32_t component_id, uint8_t initial_command) {
                                 &loaded_comp_pubkey);
     if (ret != 0)
     {
-        print_debug("Signature verification failed");
+        print_error("Signature verification failed");
         return -1;
     }
 
@@ -457,7 +457,7 @@ int do_handshake(uint32_t component_id, uint8_t initial_command) {
     ret = load_ap_private_key(&ap_key);
     if (ret != 0)
     {
-        print_debug("Error loading AP key: %d", ret);
+        print_error("Error loading AP key: %d", ret);
         return -1;
     }
 
@@ -470,7 +470,7 @@ int do_handshake(uint32_t component_id, uint8_t initial_command) {
                     ap_chal_sig_out, &ap_chal_sig_sz, &ap_key);
     if (ret != 0)
     {
-        print_debug("Error signing component DH pubkey with AP key: %d", ret);
+        print_error("Error signing component DH pubkey with AP key: %d", ret);
         return -1;
     }
 
@@ -490,7 +490,7 @@ int do_handshake(uint32_t component_id, uint8_t initial_command) {
     // Poll for ackowledgement packet to complete handshake
     len = poll_and_receive_packet(addr, receive_buffer);
     if (len == ERROR_RETURN) {
-        print_debug("Error while polling for done packet");
+        print_error("Error while polling for done packet");
     }
     char done[] = "done";
     if (strncmp((char *) receive_buffer, done, sizeof(done)) == 0) {
@@ -510,7 +510,7 @@ int do_handshake(uint32_t component_id, uint8_t initial_command) {
         }
 
         if (session_made != 1) {
-            print_debug("Could not find session for component id");
+            print_error("Could not find session for component id");
             return -1; 
         }
 
@@ -519,7 +519,7 @@ int do_handshake(uint32_t component_id, uint8_t initial_command) {
         // The AP can then poll for a data packet from component through secure_receive
         return 0;
     } else {
-        print_debug("Component did not send valid done message");
+        print_error("Component did not send valid done message");
         return -1;
     }
 }

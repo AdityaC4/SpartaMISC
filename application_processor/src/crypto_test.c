@@ -181,21 +181,21 @@ int create_hello(signed_hello_with_cert *msg, int is_ap, curve25519_key *self_dh
 
     if (ret != 0)
     {
-        print_debug("Error loading device key: %d", ret);
+        print_error("Error loading device key: %d", ret);
         return -1;
     }
 
     ret = make_curve25519_key(self_dh_key, &rng);
     if (ret != 0)
     {
-        print_debug("Error making DH key: %d", ret);
+        print_error("Error making DH key: %d", ret);
         return -1;
     }
 
     ret = wc_ed25519_make_public(&self_key, msg->sh.hi.pubkey, ED25519_PUB_KEY_SIZE);
     if (ret != 0)
     {
-        print_debug("Error exporting public key to buffer: %d", ret);
+        print_error("Error exporting public key to buffer: %d", ret);
         return -1;
     }
     print_debug("Exported ed25519 public key to buffer: wrote bytes");
@@ -204,7 +204,7 @@ int create_hello(signed_hello_with_cert *msg, int is_ap, curve25519_key *self_dh
     ret = wc_curve25519_export_public_ex(self_dh_key, msg->sh.hi.dh_pubkey, &outLen, EC25519_BIG_ENDIAN);
     if (ret != 0)
     {
-        print_debug("Error exporting device DH key to buffer: %d", ret);
+        print_error("Error exporting device DH key to buffer: %d", ret);
         return -1;
     }
     print_debug("Exported device DH public key to buffer: wrote %d bytes",
@@ -220,7 +220,7 @@ int create_hello(signed_hello_with_cert *msg, int is_ap, curve25519_key *self_dh
                     &sig_sz, &self_key);
     if (ret != 0)
     {
-        print_debug("Error signing hello: %d", ret);
+        print_error("Error signing hello: %d", ret);
         return -1;
     }
 
@@ -292,7 +292,7 @@ int verify_hello(signed_hello_with_cert *msg, byte *shared_key,
     ret = load_host_public_key(&host_pubkey);
     if (ret != 0)
     {
-        print_debug("Error loading Host key: %d", ret);
+        print_error("Error loading Host key: %d", ret);
         return -1;
     }
 
@@ -302,7 +302,7 @@ int verify_hello(signed_hello_with_cert *msg, byte *shared_key,
         wc_ed25519_import_public_ex((msg->sh).hi.pubkey, ED25519_PUB_KEY_SIZE, sender_pubkey, EC25519_BIG_ENDIAN);
     if (ret != 0)
     {
-        print_debug("Error loading sender public key: %d", ret);
+        print_error("Error loading sender public key: %d", ret);
         return -1;
     }
 
@@ -325,7 +325,7 @@ int verify_hello(signed_hello_with_cert *msg, byte *shared_key,
     ret = wc_curve25519_import_public((msg->sh).hi.dh_pubkey, CURVE25519_PUB_KEY_SIZE, &sender_dh_pubkey);
     if (ret != 0)
     {
-        print_debug("Error loading sender DH public key: %d", ret);
+        print_error("Error loading sender DH public key: %d", ret);
         return -1;
     }
 
@@ -348,7 +348,7 @@ int verify_hello(signed_hello_with_cert *msg, byte *shared_key,
                               (word32)msg->sh.hello_sig_size, sender_pubkey);
     if (ret != 0)
     {
-        print_debug("Failed to verify sender signature of hello");
+        print_error("Failed to verify sender signature of hello");
         return -1;
     }
 
@@ -360,7 +360,7 @@ int verify_hello(signed_hello_with_cert *msg, byte *shared_key,
     ret = construct_device_cert_data(&cert, sender_pubkey, sender_device_id);
     if (ret != 0)
     {
-        print_debug("Failed to construct certificate");
+        print_error("Failed to construct certificate");
         return -1;
     }
 
@@ -370,7 +370,7 @@ int verify_hello(signed_hello_with_cert *msg, byte *shared_key,
                                 (word32)msg->cert_sig_size, &host_pubkey);
     if (ret != 0)
     {
-        print_debug("Signature verification failed");
+        print_error("Signature verification failed");
         return -1;
     }
 
@@ -385,7 +385,7 @@ int verify_hello(signed_hello_with_cert *msg, byte *shared_key,
                                          shared_key_sz, EC25519_BIG_ENDIAN);
     if (ret != 0)
     {
-        print_debug("Error creating shared key: %d", ret);
+        print_error("Error creating shared key: %d", ret);
         return -1;
     }
 
