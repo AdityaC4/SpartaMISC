@@ -312,10 +312,9 @@ void init() {
     board_link_init();
 
     // Initialize sessions array
-    uint32_t component_ids[COMPONENT_CNT] = {COMPONENT_IDS};
-    for (int i = 0; i < COMPONENT_CNT; ++i) {
+    for (unsigned i = 0; i < flash_status.component_cnt; i++) {
         component_session* session = &(sessions[i]);
-        session->component_id = (word32) component_ids[i];
+        session->component_id = (word32) flash_status.component_ids[i];
         session->active = 0;
         bzero(session->key, SHARED_KEY_SIZE);
         session->send_counter = 0;
@@ -759,17 +758,17 @@ void attempt_replace() {
             flash_simple_write(FLASH_ADDR, (uint32_t*)&flash_status, sizeof(flash_entry));
 
             // Reset session for old component id and assign new id
-            for (int i = 0; i < COMPONENT_CNT; ++i) {
-                if (sessions[i].component_id == component_id_out) {
-                    component_session* session = &(sessions[i]);
+            // for (int i = 0; i < COMPONENT_CNT; ++i) {
+            //     if (sessions[i].component_id == component_id_out) {
+            //         component_session* session = &(sessions[i]);
 
-                    session->component_id = (word32) component_id_in;
-                    session->active = 0;
-                    bzero(session->key, SHARED_KEY_SIZE);
-                    session->send_counter = 0;
-                    session->receive_counter = 0;
-                }
-            }
+            //         session->component_id = (word32) component_id_in;
+            //         session->active = 0;
+            //         bzero(session->key, SHARED_KEY_SIZE);
+            //         session->send_counter = 0;
+            //         session->receive_counter = 0;
+            //     }
+            // }
 
             print_debug("Replaced 0x%08x with 0x%08x\n", component_id_out,
                     component_id_in);
