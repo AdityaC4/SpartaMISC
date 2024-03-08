@@ -329,12 +329,6 @@ int do_handshake(byte* hello_buffer) {
 // Your design does not need to change this
 void boot() {
 
-    // POST BOOT FUNCTIONALITY
-    // DO NOT REMOVE IN YOUR DESIGN
-    #ifdef POST_BOOT
-        POST_BOOT
-    #else
-
     print_debug("Testing secure receive on component");
     // TEST - check secure receive for component
     bzero(receive_buffer, MAX_I2C_MESSAGE_LEN);
@@ -348,6 +342,12 @@ void boot() {
 
     char comptest[] = "hellofromcomp";
     secure_send(comptest, sizeof(comptest));
+
+    // POST BOOT FUNCTIONALITY
+    // DO NOT REMOVE IN YOUR DESIGN
+    #ifdef POST_BOOT
+        POST_BOOT
+    #else
 
     // Anything after this macro can be changed by your design
     // but will not be run on provisioned systems
