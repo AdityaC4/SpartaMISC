@@ -395,169 +395,169 @@ int verify_hello(signed_hello_with_cert *msg, byte *shared_key,
     return 0;
 }
 
-int simulate_handshake()
-{
-    print_debug("Size of signed_hello_with_cert: %d",
-                (int)sizeof(signed_hello_with_cert));
-    // print_debug("Size of signed_hello_with_cert_and_chal: %d",
-    // sizeof(signed_hello_with_cert_and_chal));
+// int simulate_handshake()
+// {
+//     print_debug("Size of signed_hello_with_cert: %d",
+//                 (int)sizeof(signed_hello_with_cert));
+//     // print_debug("Size of signed_hello_with_cert_and_chal: %d",
+//     // sizeof(signed_hello_with_cert_and_chal));
 
-    WC_RNG rng;
-    wc_InitRng(&rng);
+//     WC_RNG rng;
+//     wc_InitRng(&rng);
 
-    int ret;
+//     int ret;
 
-    // AP creates hello
+//     // AP creates hello
 
-    curve25519_key ap_dh_key;
-    signed_hello_with_cert msg;
+//     curve25519_key ap_dh_key;
+//     signed_hello_with_cert msg;
 
-    ret = create_hello(&msg, 1, &ap_dh_key);
-    if (ret != 0)
-    {
-        print_debug("Error creating signed ap hello with cert");
-        return -1;
-    }
+//     ret = create_hello(&msg, 1, &ap_dh_key);
+//     if (ret != 0)
+//     {
+//         print_debug("Error creating signed ap hello with cert");
+//         return -1;
+//     }
 
-    // --> AP sends this to component
+//     // --> AP sends this to component
 
-    // Preemptively creating component's hello here first to initialize its DH
-    // key
-    curve25519_key comp_dh_key;
-    print_debug("Creating hello for component");
-    signed_hello_with_cert resp;
-    ret = create_hello(&resp, 0, &comp_dh_key);
+//     // Preemptively creating component's hello here first to initialize its DH
+//     // key
+//     curve25519_key comp_dh_key;
+//     print_debug("Creating hello for component");
+//     signed_hello_with_cert resp;
+//     ret = create_hello(&resp, 0, &comp_dh_key);
 
-    // Component verifies hello and derives its shared key
+//     // Component verifies hello and derives its shared key
 
-    byte comp_shared_key[SHARED_KEY_SIZE];
-    word32 comp_shared_key_size = SHARED_KEY_SIZE;
+//     byte comp_shared_key[SHARED_KEY_SIZE];
+//     word32 comp_shared_key_size = SHARED_KEY_SIZE;
 
-    // This is the AP's public key as parsed by the component from its hello
-    // Saved for verifying challenge response signature later
-    ed25519_key sender_pubkey_for_comp;
-    wc_ed25519_init(&sender_pubkey_for_comp);
+//     // This is the AP's public key as parsed by the component from its hello
+//     // Saved for verifying challenge response signature later
+//     ed25519_key sender_pubkey_for_comp;
+//     wc_ed25519_init(&sender_pubkey_for_comp);
 
-    ret = verify_hello(&msg, comp_shared_key, &comp_shared_key_size,
-                       &comp_dh_key, AP_TAG, &sender_pubkey_for_comp);
-    if (ret != 0)
-    {
-        print_debug("Failed to verify ap hello");
-        return -1;
-    }
+//     ret = verify_hello(&msg, comp_shared_key, &comp_shared_key_size,
+//                        &comp_dh_key, AP_TAG, &sender_pubkey_for_comp);
+//     if (ret != 0)
+//     {
+//         print_debug("Failed to verify ap hello");
+//         return -1;
+//     }
 
-    // Component signs challenge for its response hello
+//     // Component signs challenge for its response hello
 
-    ed25519_key comp_key;
-    ret = load_comp_private_key(&comp_key);
-    if (ret != 0)
-    {
-        print_debug("Error loading component key: %d", ret);
-        return -1;
-    }
+//     ed25519_key comp_key;
+//     ret = load_comp_private_key(&comp_key);
+//     if (ret != 0)
+//     {
+//         print_debug("Error loading component key: %d", ret);
+//         return -1;
+//     }
 
-    print_debug("Component signing AP dh key as challenge");
+//     print_debug("Component signing AP dh key as challenge");
 
-    byte comp_chal_sig_out[ED25519_SIG_SIZE];
-    word32 comp_chal_sig_sz = ED25519_SIG_SIZE;
+//     byte comp_chal_sig_out[ED25519_SIG_SIZE];
+//     word32 comp_chal_sig_sz = ED25519_SIG_SIZE;
 
-    ret = sign_data((byte *)&(msg.sh.hi.dh_pubkey), CURVE25519_PUB_KEY_SIZE,
-                    comp_chal_sig_out, &comp_chal_sig_sz, &comp_key);
-    if (ret != 0)
-    {
-        print_debug("Error signing AP DH pubkey with component key: %d", ret);
-        return -1;
-    }
+//     ret = sign_data((byte *)&(msg.sh.hi.dh_pubkey), CURVE25519_PUB_KEY_SIZE,
+//                     comp_chal_sig_out, &comp_chal_sig_sz, &comp_key);
+//     if (ret != 0)
+//     {
+//         print_debug("Error signing AP DH pubkey with component key: %d", ret);
+//         return -1;
+//     }
 
-    print_debug("Creating response signature struct");
+//     print_debug("Creating response signature struct");
 
-    signed_chal resp_chal;
+//     signed_chal resp_chal;
 
-    memset(resp_chal.chal_sig, 0, ED25519_SIG_SIZE);
-    memcpy(resp_chal.chal_sig, comp_chal_sig_out, comp_chal_sig_sz);
-    resp_chal.chal_sig_size = comp_chal_sig_sz;
+//     memset(resp_chal.chal_sig, 0, ED25519_SIG_SIZE);
+//     memcpy(resp_chal.chal_sig, comp_chal_sig_out, comp_chal_sig_sz);
+//     resp_chal.chal_sig_size = comp_chal_sig_sz;
 
-    // <-- Component sends resp and resp_chal to AP
+//     // <-- Component sends resp and resp_chal to AP
 
-    // AP verifies component hello along with the challenge signature, derives
-    // the shared key
+//     // AP verifies component hello along with the challenge signature, derives
+//     // the shared key
 
-    byte ap_shared_key[SHARED_KEY_SIZE];
-    word32 ap_shared_key_size = SHARED_KEY_SIZE;
+//     byte ap_shared_key[SHARED_KEY_SIZE];
+//     word32 ap_shared_key_size = SHARED_KEY_SIZE;
 
-    // This is the component's pubkey as parsed by the AP from the response
-    // Saved for verifying challenge response signature
-    ed25519_key sender_pubkey_for_ap;
-    wc_ed25519_init(&sender_pubkey_for_ap);
+//     // This is the component's pubkey as parsed by the AP from the response
+//     // Saved for verifying challenge response signature
+//     ed25519_key sender_pubkey_for_ap;
+//     wc_ed25519_init(&sender_pubkey_for_ap);
 
-    print_debug("AP verifying component hello: ");
+//     print_debug("AP verifying component hello: ");
 
-    ret = verify_hello(&resp, ap_shared_key, &ap_shared_key_size, &ap_dh_key,
-                       COMPONENT_ID, &sender_pubkey_for_ap);
-    if (ret != 0)
-    {
-        print_debug("Failed to verify component hello");
-        return -1;
-    }
+//     ret = verify_hello(&resp, ap_shared_key, &ap_shared_key_size, &ap_dh_key,
+//                        COMPONENT_ID, &sender_pubkey_for_ap);
+//     if (ret != 0)
+//     {
+//         print_debug("Failed to verify component hello");
+//         return -1;
+//     }
 
-    print_debug("AP verifying challenge signature from component");
-    ret = verify_data_signature((byte *)msg.sh.hi.dh_pubkey, CURVE25519_PUB_KEY_SIZE,
-                                resp_chal.chal_sig, resp_chal.chal_sig_size,
-                                &sender_pubkey_for_ap);
-    if (ret != 0)
-    {
-        print_debug("Signature verification failed");
-        return -1;
-    }
+//     print_debug("AP verifying challenge signature from component");
+//     ret = verify_data_signature((byte *)msg.sh.hi.dh_pubkey, CURVE25519_PUB_KEY_SIZE,
+//                                 resp_chal.chal_sig, resp_chal.chal_sig_size,
+//                                 &sender_pubkey_for_ap);
+//     if (ret != 0)
+//     {
+//         print_debug("Signature verification failed");
+//         return -1;
+//     }
 
-    print_debug("AP successfully verified component challenge signature");
+//     print_debug("AP successfully verified component challenge signature");
 
-    // AP now signs component's DH pubkey as its challenge response
-    ed25519_key ap_key;
-    ret = load_ap_private_key(&ap_key);
-    if (ret != 0)
-    {
-        print_debug("Error loading AP key: %d", ret);
-        return -1;
-    }
+//     // AP now signs component's DH pubkey as its challenge response
+//     ed25519_key ap_key;
+//     ret = load_ap_private_key(&ap_key);
+//     if (ret != 0)
+//     {
+//         print_debug("Error loading AP key: %d", ret);
+//         return -1;
+//     }
 
-    print_debug("AP signing Component dh key as challenge");
+//     print_debug("AP signing Component dh key as challenge");
 
-    byte ap_chal_sig_out[ED25519_SIG_SIZE];
-    word32 ap_chal_sig_sz = ED25519_SIG_SIZE;
+//     byte ap_chal_sig_out[ED25519_SIG_SIZE];
+//     word32 ap_chal_sig_sz = ED25519_SIG_SIZE;
 
-    ret = sign_data((byte *)&(resp.sh.hi.dh_pubkey), CURVE25519_PUB_KEY_SIZE,
-                    ap_chal_sig_out, &ap_chal_sig_sz, &ap_key);
-    if (ret != 0)
-    {
-        print_debug("Error signing component DH pubkey with AP key: %d", ret);
-        return -1;
-    }
+//     ret = sign_data((byte *)&(resp.sh.hi.dh_pubkey), CURVE25519_PUB_KEY_SIZE,
+//                     ap_chal_sig_out, &ap_chal_sig_sz, &ap_key);
+//     if (ret != 0)
+//     {
+//         print_debug("Error signing component DH pubkey with AP key: %d", ret);
+//         return -1;
+//     }
 
-    print_debug("Setting challenge signature in response struct");
+//     print_debug("Setting challenge signature in response struct");
 
-    signed_chal sc_msg;
+//     signed_chal sc_msg;
 
-    memset(sc_msg.chal_sig, 0, ED25519_SIG_SIZE);
-    memcpy(sc_msg.chal_sig, ap_chal_sig_out, ap_chal_sig_sz);
-    sc_msg.chal_sig_size = ap_chal_sig_sz;
+//     memset(sc_msg.chal_sig, 0, ED25519_SIG_SIZE);
+//     memcpy(sc_msg.chal_sig, ap_chal_sig_out, ap_chal_sig_sz);
+//     sc_msg.chal_sig_size = ap_chal_sig_sz;
 
-    // --> AP sends sc_msg to component
+//     // --> AP sends sc_msg to component
 
-    print_debug("Component verifying signed challenge from AP");
+//     print_debug("Component verifying signed challenge from AP");
 
-    ret = verify_data_signature((byte *)&(resp.sh.hi.dh_pubkey), CURVE25519_PUB_KEY_SIZE,
-                                sc_msg.chal_sig, sc_msg.chal_sig_size,
-                                &sender_pubkey_for_comp);
-    if (ret != 0)
-    {
-        print_debug("Signature verification failed");
-        return -1;
-    }
+//     ret = verify_data_signature((byte *)&(resp.sh.hi.dh_pubkey), CURVE25519_PUB_KEY_SIZE,
+//                                 sc_msg.chal_sig, sc_msg.chal_sig_size,
+//                                 &sender_pubkey_for_comp);
+//     if (ret != 0)
+//     {
+//         print_debug("Signature verification failed");
+//         return -1;
+//     }
 
-    print_debug("Component successfully verified AP challenge signature");
+//     print_debug("Component successfully verified AP challenge signature");
 
-    print_debug("HANDSHAKE COMPLETE :))))");
+//     print_debug("HANDSHAKE COMPLETE :))))");
 
-    return 1;
-}
+//     return 1;
+// }
