@@ -632,10 +632,6 @@ int boot_components() {
             return ERROR_RETURN;
         }
 
-        // Test secure send from AP
-        char test[] = "hellotest";
-        secure_send(addr, test, sizeof(test));
-
         // Securely receive component boot message
         bzero(receive_buffer, MAX_I2C_MESSAGE_LEN);
         secure_receive(addr, receive_buffer);
@@ -687,6 +683,31 @@ void boot() {
     #ifdef POST_BOOT
         POST_BOOT
     #else
+
+    print_debug("Testing secure send from AP");
+    i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[0]);
+
+    // Test secure send from AP
+    char test[] = "hellofromap";
+    int ret = secure_send(addr, test, sizeof(test));
+    if (ret < 0) {
+        print_error("Error doing secure send from AP!");
+    }
+
+    print_debug("Sent, waiting to receive");
+
+    char rcv_buf[MAX_I2C_MESSAGE_LEN - 1];
+    ret = secure_receive(addr, rcv_buf);
+    char expected[] = "hellofromcomp";
+
+    if (strncmp((unsigned char *) rcv_buf, expected, sizeof(expected)) != 0) {
+        print_error("Secure receive on AP failed");
+        return; 
+    }
+
+    print_debug("Secure send and receive check working");
+
+
     // Everything after this point is modifiable in your design
     // LED loop to show that boot occurred
     while (1) {

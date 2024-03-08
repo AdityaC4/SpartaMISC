@@ -77,7 +77,7 @@ def process_output(output):
         output = output[:match.start()] + output[match.end():]
         for line in match.group(1).strip().split('\n'):
             logger.bind(extra="OUTPUT").success(line.strip())
-        exit(0)
+        # exit(0)
     # Find ERROR level messages
     match = re.search("%error: ((.|\n|\r)*?)%", output)
     if match != None:

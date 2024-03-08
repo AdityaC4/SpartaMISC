@@ -334,6 +334,21 @@ void boot() {
     #ifdef POST_BOOT
         POST_BOOT
     #else
+
+    print_debug("Testing secure receive on component");
+    // TEST - check secure receive for component
+    bzero(receive_buffer, MAX_I2C_MESSAGE_LEN);
+    secure_receive(receive_buffer);
+    char expected[] = "hellofromap";
+
+    if (strncmp((unsigned char *) receive_buffer, expected, sizeof(expected)) != 0) {
+        print_error("Secure receive on component failed");
+        return; 
+    }
+
+    char comptest[] = "hellofromcomp";
+    secure_send(comptest, sizeof(comptest));
+
     // Anything after this macro can be changed by your design
     // but will not be run on provisioned systems
     LED_Off(LED1);
@@ -391,14 +406,6 @@ void process_boot() {
         print_error("Error doing handshake!");
         return; 
     } 
-
-    // TEST - check secure receive for component
-    bzero(receive_buffer, MAX_I2C_MESSAGE_LEN);
-    secure_receive(receive_buffer);
-    if (strncmp((unsigned char *) receive_buffer, "hellotest", 9) != 0) {
-        print_error("Secure receive on component failed");
-        return; 
-    }
 
     // Securely send the boot message
     uint8_t len = strlen(COMPONENT_BOOT_MSG) + 1;
