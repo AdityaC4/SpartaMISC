@@ -182,6 +182,12 @@ int secure_receive(uint8_t* buffer) {
         return ret;
     }
 
+    // Send a continue packet to avoid error
+    // with two successive receives
+
+    char continue_msg[] = "continue";
+    send_packet_and_ack(sizeof(continue_msg), continue_msg);
+
     ret = wait_and_receive_packet(auth_buf);
     if (ret < SUCCESS_RETURN) {
         print_debug("Error polling for second packet");
@@ -383,8 +389,16 @@ void process_boot() {
     int ret = do_handshake(command->params);
     if (ret != 0) {
         print_error("Error doing handshake!");
-        return -1; 
+        return; 
     } 
+
+    // TEST - check secure receive for component
+    bzero(receive_buffer, MAX_I2C_MESSAGE_LEN);
+    secure_receive(receive_buffer);
+    if (strncmp((unsigned char *) receive_buffer, "hellotest", 9) != 0) {
+        print_error("Secure receive on component failed");
+        return; 
+    }
 
     // Securely send the boot message
     uint8_t len = strlen(COMPONENT_BOOT_MSG) + 1;

@@ -189,10 +189,24 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
     memcpy(auth.tag, tag, sizeof(tag));
 
     // Send encrypted data
-    ret = send_packet(address, len, buffer);
+    ret = send_packet(address, len, send_buf);
     if (ret < SUCCESS_RETURN) {
         print_error("Error sending encrypted packet");
         return ret;
+    }
+
+    // Wait for a continue message
+    // to avoid error with successive sends from AP
+    char continue_buf[MAX_I2C_MESSAGE_LEN - 1];
+    char expected[] = "continue";
+    ret = poll_and_receive_packet(address, continue_buf);
+    if (ret < SUCCESS_RETURN) {
+        print_error("Error polling for continue packet");
+        return ret;
+    }
+    if (strncmp(continue_buf, expected, sizeof(expected) != 0)) {
+        print_error("Continue packet does not match!");
+        return -1;
     }
 
     // Send IV and authentication data
@@ -617,6 +631,10 @@ int boot_components() {
             print_error("Error while doing handshake");
             return ERROR_RETURN;
         }
+
+        // Test secure send from AP
+        char test[] = "hellotest";
+        secure_send(addr, test, sizeof(test));
 
         // Securely receive component boot message
         bzero(receive_buffer, MAX_I2C_MESSAGE_LEN);
