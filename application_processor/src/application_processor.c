@@ -510,7 +510,7 @@ int do_handshake(uint32_t component_id, uint8_t initial_command) {
         }
 
         if (session_made != 1) {
-            print_error("Could not find session for component id");
+            print_error("Could not find session for component id 0x%08x", component_id);
             return -1; 
         }
 
@@ -758,9 +758,23 @@ void attempt_replace() {
             flash_simple_erase_page(FLASH_ADDR);
             flash_simple_write(FLASH_ADDR, (uint32_t*)&flash_status, sizeof(flash_entry));
 
+            // Reset session for old component id and assign new id
+            for (int i = 0; i < COMPONENT_CNT; ++i) {
+                if (sessions[i].component_id == component_id_out) {
+                    component_session* session = &(sessions[i]);
+
+                    session->component_id = (word32) component_id_in;
+                    session->active = 0;
+                    bzero(session->key, SHARED_KEY_SIZE);
+                    session->send_counter = 0;
+                    session->receive_counter = 0;
+                }
+            }
+
             print_debug("Replaced 0x%08x with 0x%08x\n", component_id_out,
                     component_id_in);
             print_success("Replace\n");
+
             return;
         }
     }
