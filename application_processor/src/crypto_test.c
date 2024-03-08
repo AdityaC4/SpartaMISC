@@ -161,7 +161,7 @@ int verify_data_signature(const byte *data, word32 data_size, const byte *sig,
  */
 int create_hello(signed_hello_with_cert *msg, int is_ap, curve25519_key *self_dh_key)
 {
-    print_info("In create_hello()");
+    print_debug("In create_hello()");
 
     print_debug("Size of hello struct: %d", (int)sizeof(hello));
 
@@ -281,7 +281,7 @@ int verify_hello(signed_hello_with_cert *msg, byte *shared_key,
                  word32 sender_device_id, // Component ID or AP tag
                  ed25519_key *sender_pubkey)
 {
-    print_info("In verify_hello()");
+    print_debug("In verify_hello()");
 
     int ret;
 
