@@ -433,7 +433,7 @@ int do_handshake(uint32_t component_id, uint8_t initial_command) {
     print_debug("AP verifying component hello: ");
 
     ret = verify_hello(&comp_hello, ap_shared_key, &ap_shared_key_size, &ap_dh_key,
-                       COMPONENT_ID, &loaded_comp_pubkey);
+                       component_id, &loaded_comp_pubkey);
     if (ret != 0)
     {
         print_error("Failed to verify component hello");
