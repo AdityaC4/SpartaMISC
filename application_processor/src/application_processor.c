@@ -154,11 +154,11 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
         }
     }
     if (!session) {
-        print_debug("Could not find a component with matching address!");
+        print_error("Could not find a component with matching address!");
         return -1;
     }
     if (session->active != 1) {
-        print_debug("Session is not active!");
+        print_error("Session is not active!");
         return -1;
     }
 
@@ -182,7 +182,7 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
     // Encrypt data
     int ret = encrypt((byte* ) buffer, len, send_buf, session->key, iv, (byte *) &(auth.counter), sizeof(auth.counter), tag); 
     if (ret != 0) {
-        print_debug("Failed to encrypt message: error code %d", ret);
+        print_error("Failed to encrypt message: error code %d", ret);
     }
 
     // Store tag
@@ -191,14 +191,14 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
     // Send encrypted data
     ret = send_packet(address, len, buffer);
     if (ret < SUCCESS_RETURN) {
-        print_debug("Error sending encrypted packet");
+        print_error("Error sending encrypted packet");
         return ret;
     }
 
     // Send IV and authentication data
     ret = send_packet(address, sizeof(auth), (byte *) &auth);
     if (ret < SUCCESS_RETURN) {
-        print_debug("Error sending authenticated data");
+        print_error("Error sending authenticated data");
     }
 
     return ret;
@@ -226,23 +226,23 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
         }
     }
     if (!session) {
-        print_debug("Could not find a component with matching address!");
+        print_error("Could not find a component with matching address!");
         return -1;
     }
     if (session->active != 1) {
-        print_debug("Session is not active!");
+        print_error("Session is not active!");
         return -1;
     }
 
     int ret = poll_and_receive_packet(address, data_buf);
     if (ret < SUCCESS_RETURN) {
-        print_debug("Error polling for first packet");
+        print_error("Error polling for first packet");
         return ret;
     }
 
     ret = poll_and_receive_packet(address, auth_buf);
     if (ret < SUCCESS_RETURN) {
-        print_debug("Error polling for second packet");
+        print_error("Error polling for second packet");
         return ret;
     }
 
@@ -250,13 +250,13 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
     memcpy(&auth, auth_buf, sizeof(auth));
 
     if (auth.counter <= session->receive_counter) {
-        print_debug("Error! counter was less than receive counter");
+        print_error("Error! counter was less than receive counter");
         return ERROR_RETURN;
     }
 
     ret = decrypt((byte* ) buffer, auth.length, data_buf, session->key, auth.iv, (byte *) &(auth.counter), sizeof(auth.counter), auth.tag); 
     if (ret != 0) {
-        print_debug("Error decrypting message");
+        print_error("Error decrypting message");
         return ERROR_RETURN;
     }
 
