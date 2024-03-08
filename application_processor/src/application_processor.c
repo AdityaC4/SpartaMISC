@@ -593,23 +593,35 @@ int validate_components() {
 int boot_components() {
     // Buffers for board link communication
     uint8_t receive_buffer[MAX_I2C_MESSAGE_LEN];
-    uint8_t transmit_buffer[MAX_I2C_MESSAGE_LEN];
 
     // Send boot command to each component
     for (unsigned i = 0; i < flash_status.component_cnt; i++) {
         // Set the I2C address of the component
         i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[i]);
         
-        // Create command message
-        command_message* command = (command_message*) transmit_buffer;
-        command->opcode = COMPONENT_CMD_BOOT;
+        // // Create command message
+        // command_message* command = (command_message*) transmit_buffer;
+        // command->opcode = COMPONENT_CMD_BOOT;
         
-        // Send out command and receive result
-        int len = issue_cmd(addr, transmit_buffer, receive_buffer);
-        if (len == ERROR_RETURN) {
-            print_error("Could not boot component\n");
+        // // Send out command and receive result
+        // int len = issue_cmd(addr, transmit_buffer, receive_buffer);
+        // if (len == ERROR_RETURN) {
+        //     print_error("Could not boot component\n");
+        //     return ERROR_RETURN;
+        // }
+
+        word32 component_id = flash_status.component_ids[i];
+
+        // Do handshake with boot command
+        int ret = do_handshake(component_id, COMPONENT_CMD_BOOT);
+        if (ret != 0) {
+            print_error("Error while doing handshake");
             return ERROR_RETURN;
         }
+
+        // Securely receive component boot message
+        bzero(receive_buffer, MAX_I2C_MESSAGE_LEN);
+        secure_receive(addr, receive_buffer);
 
         // Print boot message from component
         print_info("0x%08x>%s\n", flash_status.component_ids[i], receive_buffer);
@@ -703,55 +715,6 @@ int validate_token() {
 
 // Boot the components and board if the components validate
 void attempt_boot() {
-    #ifdef CRYPTO_EXAMPLE
-
-    char data[] = "Crypto Example! More text";
-
-    // Print crypto example
-    print_debug("Original Data: %s\r\n", (uint8_t *)data);
-
-    byte ciphertext[sizeof(data)];
-
-    byte key[SHARED_KEY_SIZE];
-    // Zero out the key
-    bzero(key, SHARED_KEY_SIZE);
-
-    // IV 
-    byte iv[CHACHA_IV_SIZE];
-    wc_GenerateSeed(NULL, iv, CHACHA_IV_SIZE); // Initialize IV value using MXC TRNG
-
-    // Tag 
-    byte tag[CHACHA_TAG_SIZE];
-    bzero(tag, CHACHA_TAG_SIZE);
-
-    message_auth auth;
-    memcpy(auth.iv, iv, CHACHA_IV_SIZE);
-    auth.counter = 0;
-
-    // Encrypt example data and print out
-    int ret = encrypt((byte *)data, sizeof(data), ciphertext, key, iv, (byte *)&auth, sizeof(auth), tag);
-    if (ret != 0)
-    {
-        print_debug("Failed to encrypt message: error code %d", ret);
-    }
-
-    print_debug("Encrypted data: ");
-    print_hex_debug(ciphertext, sizeof(data));
-
-    // Decrypt the encrypted message and print out
-    byte decrypted[sizeof(data)];
-    ret = decrypt(decrypted, sizeof(data), ciphertext, key, auth.iv, (byte *)&auth, sizeof(auth), tag);
-    if (ret != 0)
-    {
-        print_debug("Failed to decrypt message: error code %d", ret);
-    }
-    print_debug("Decrypted message: %s\r\n", decrypted);
-
-    // simulate_handshake();
-
-    #endif
-
-
     if (validate_components()) {
        print_error("Components could not be validated\n");
        return;

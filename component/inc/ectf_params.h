@@ -1,8 +1,8 @@
 #ifndef __ECTF_PARAMS__
 #define __ECTF_PARAMS__
-#define COMPONENT_ID 286331173
-#define COMPONENT_BOOT_MSG "Component boot"
-#define ATTESTATION_LOC "McLean"
-#define ATTESTATION_DATE "08/08/08"
-#define ATTESTATION_CUSTOMER "Fritz"
+#define COMPONENT_ID 286331172
+#define COMPONENT_BOOT_MSG "Component 2 boot"
+#define ATTESTATION_LOC "McBean"
+#define ATTESTATION_DATE "09/09/09"
+#define ATTESTATION_CUSTOMER "Britz"
 #endif

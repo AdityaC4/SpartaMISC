@@ -376,11 +376,21 @@ void component_process_cmd() {
 }
 
 void process_boot() {
-    // The AP requested a boot. Set `component_boot` for the main loop and
-    // respond with the boot message
+    // The AP sent a boot command
+    command_message* command = (command_message*) receive_buffer;
+
+    // Do a handshake to verify the boot
+    int ret = do_handshake(command->params);
+    if (ret != 0) {
+        print_error("Error doing handshake!");
+        return -1; 
+    } 
+
+    // Securely send the boot message
     uint8_t len = strlen(COMPONENT_BOOT_MSG) + 1;
     memcpy((void*)transmit_buffer, COMPONENT_BOOT_MSG, len);
-    send_packet_and_ack(len, transmit_buffer);
+    secure_send(transmit_buffer, len);
+
     // Call the boot function
     boot();
 }
@@ -412,7 +422,6 @@ int process_attest() {
     uint8_t len = sprintf((char*)transmit_buffer, "LOC>%s\nDATE>%s\nCUST>%s\n",
                 ATTESTATION_LOC, ATTESTATION_DATE, ATTESTATION_CUSTOMER) + 1;
 
-    // send_packet_and_ack(len, transmit_buffer);
     secure_send(transmit_buffer, len);
     
     return 0;
