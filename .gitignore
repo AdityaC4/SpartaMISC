@@ -8,6 +8,10 @@
 application_processor/inc/ectf_keys.h
 component/inc/ectf_keys.h
 
+# param files
+component/inc/ectf_params.h
+application_processor/inc/ectf_params.h
+
 deployment/host_private_key.pem
 
 .DS_Store
