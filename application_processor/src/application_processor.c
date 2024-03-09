@@ -260,7 +260,7 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
 */
 int secure_receive(i2c_addr_t address, uint8_t* buffer) {
     if (booted) {
-        print_info("AP: Doing secure_receive.\n");
+        print_info("AP: Doing secure_receive. Len: %d\n", sizeof(buffer));
     }
 
     byte data_buf[MAX_I2C_MESSAGE_LEN-1];
