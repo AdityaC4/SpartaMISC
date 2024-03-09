@@ -123,6 +123,9 @@ flash_entry flash_status;
 // Active sessions with components
 component_session sessions[COMPONENT_CNT];
 
+// Testing global variable for info level messages during POST_BOOT
+int booted = 0;
+
 
 /********************************* REFERENCE FLAG **********************************/
 // trust me, it's easier to get the boot reference flag by
@@ -144,7 +147,9 @@ typedef uint32_t aErjfkdfru;const aErjfkdfru aseiFuengleR[]={0x1ffe4b6,0x3098ac,
 
 */
 int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
-    print_debug("AP: Doing secure_send\n");
+    if (booted) {
+        print_info("AP: Doing secure_send. Len: %d\n", len);
+    }
 
     byte send_buf[len];
     bzero(send_buf, sizeof(send_buf));
@@ -197,27 +202,37 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
         return ret;
     }
 
-    print_info("AP: Sent Packet\n");
+    if (booted) {
+        print_info("AP: Sent Packet\n");
+    }
 
     // Wait for a continue message
     // to avoid error with successive sends from AP
     char continue_buf[MAX_I2C_MESSAGE_LEN - 1];
     char expected[] = "continue";
 
-    print_info("AP: Waiting for Continue Message\n");
+    if (booted) {
+        print_info("AP: Waiting for Continue Message\n");
+    }
+
     ret = poll_and_receive_packet(address, continue_buf);
     if (ret < SUCCESS_RETURN) {
         print_error("Error polling for continue packet");
         return ret;
     }
-    print_info("AP: Received Continue Message, testing for packet match.\n");
+
+    if (booted) {
+        print_info("AP: Received Continue Message, testing for packet match.\n");
+    }
 
     if (strncmp(continue_buf, expected, sizeof(expected) != 0)) {
         print_error("Continue packet does not match!");
         return -1;
     }
 
-    print_info("AP: Matches! Sending IV and Auth Data.\n");
+    if (booted) {
+       print_info("AP: Matches! Sending IV and Auth Data.\n");
+    }
 
     // Send IV and authentication data
     ret = send_packet(address, sizeof(auth), (byte *) &auth);
@@ -225,7 +240,9 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
         print_error("Error sending authenticated data");
     }
 
-    print_info("AP: Finished secure_send\n");
+    if (booted) {
+        print_info("AP: Finished secure_send\n");
+    }
 
     return ret;
 }
@@ -242,7 +259,9 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
  * This function must be implemented by your team to align with the security requirements.
 */
 int secure_receive(i2c_addr_t address, uint8_t* buffer) {
-    print_info("AP: Doing secure_receive\n");
+    if (booted) {
+        print_info("AP: Doing secure_receive.\n");
+    }
 
     byte data_buf[MAX_I2C_MESSAGE_LEN-1];
     byte auth_buf[MAX_I2C_MESSAGE_LEN-1];
@@ -262,7 +281,9 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
         return -1;
     }
 
-    print_info("AP: Receiving First Packet\n");
+    if (booted) {
+        print_info("AP: Receiving First Packet\n");
+    }
 
     int ret = poll_and_receive_packet(address, data_buf);
     if (ret < SUCCESS_RETURN) {
@@ -270,7 +291,10 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
         return ret;
     }
 
-    print_info("AP: Receiving Second Packet\n");
+    if (booted) {
+        print_info("AP: Receiving Second Packet\n");
+    }
+
     ret = poll_and_receive_packet(address, auth_buf);
     if (ret < SUCCESS_RETURN) {
         print_error("Error polling for second packet");
@@ -291,7 +315,9 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
         return ERROR_RETURN;
     }
 
-    print_info("AP: Finished secure_receive\n");
+    if (booted) {
+        print_info("AP: Finished secure_receive\n");
+    }
 
     session->receive_counter = auth.counter;
     return auth.length;
@@ -697,6 +723,7 @@ int attest_component(uint32_t component_id) {
 // YOUR DESIGN MUST NOT CHANGE THIS FUNCTION
 // Boot message is customized through the AP_BOOT_MSG macro
 void boot() {
+    booted = 1;
 
     print_info("Testing secure send from AP");
     i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[0]);
