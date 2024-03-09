@@ -116,6 +116,8 @@ ap_session session;
  * This function must be implemented by your team to align with the security requirements.
 */
 void secure_send(uint8_t* buffer, uint8_t len) {
+    print_debug("Component: Doing secure_send\n");
+
     byte send_buf[len];
     bzero(send_buf, sizeof(send_buf));
 
@@ -153,8 +155,14 @@ void secure_send(uint8_t* buffer, uint8_t len) {
     // Send encrypted data
     send_packet_and_ack(len, send_buf);
 
+    print_debug("Component: Sent Packet\n");
+
     // Send IV and authentication data
     send_packet_and_ack(sizeof(auth), (byte *) &auth);
+
+    print_debug("Component: Sent IV and Auth Data, ended secure_send\n");
+
+    return;
 }
 
 /**
@@ -168,6 +176,8 @@ void secure_send(uint8_t* buffer, uint8_t len) {
  * This function must be implemented by your team to align with the security requirements.
 */
 int secure_receive(uint8_t* buffer) {
+    print_debug("Component: Doing secure_receive\n");
+
     byte data_buf[MAX_I2C_MESSAGE_LEN-1];
     byte auth_buf[MAX_I2C_MESSAGE_LEN-1];
 
@@ -182,17 +192,22 @@ int secure_receive(uint8_t* buffer) {
         return ret;
     }
 
+    print_debug("Component: Received first packet\n");
     // Send a continue packet to avoid error
     // with two successive receives
 
     char continue_msg[] = "continue";
     send_packet_and_ack(sizeof(continue_msg), continue_msg);
 
+    print_debug("Component: Sent Continue Message\n");
+
     ret = wait_and_receive_packet(auth_buf);
     if (ret < SUCCESS_RETURN) {
         print_debug("Error polling for second packet");
         return ret;
     }
+
+    print_debug("Component: Received Second Packet\n");
 
     message_auth auth;
     memcpy(&auth, auth_buf, sizeof(auth));
@@ -207,6 +222,8 @@ int secure_receive(uint8_t* buffer) {
         print_debug("Error decrypting message");
         return ERROR_RETURN;
     }
+
+     print_debug("Component: Finished secure_receive\n");
 
     session.receive_counter = auth.counter;
     return auth.length;

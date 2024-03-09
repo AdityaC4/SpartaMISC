@@ -144,6 +144,8 @@ typedef uint32_t aErjfkdfru;const aErjfkdfru aseiFuengleR[]={0x1ffe4b6,0x3098ac,
 
 */
 int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
+    print_debug("AP: Doing secure_send\n");
+
     byte send_buf[len];
     bzero(send_buf, sizeof(send_buf));
 
@@ -195,25 +197,35 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
         return ret;
     }
 
+    print_debug("AP: Sent Packet\n");
+
     // Wait for a continue message
     // to avoid error with successive sends from AP
     char continue_buf[MAX_I2C_MESSAGE_LEN - 1];
     char expected[] = "continue";
+
+    print_debug("AP: Waiting for Continue Message\n");
     ret = poll_and_receive_packet(address, continue_buf);
     if (ret < SUCCESS_RETURN) {
         print_error("Error polling for continue packet");
         return ret;
     }
+    print_debug("AP: Received Continue Message, testing for packet match.\n");
+
     if (strncmp(continue_buf, expected, sizeof(expected) != 0)) {
         print_error("Continue packet does not match!");
         return -1;
     }
+
+    print_debug("AP: Matches! Sending IV and Auth Data.\n");
 
     // Send IV and authentication data
     ret = send_packet(address, sizeof(auth), (byte *) &auth);
     if (ret < SUCCESS_RETURN) {
         print_error("Error sending authenticated data");
     }
+
+    print_debug("AP: Finished secure_send\n");
 
     return ret;
 }
@@ -230,6 +242,8 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
  * This function must be implemented by your team to align with the security requirements.
 */
 int secure_receive(i2c_addr_t address, uint8_t* buffer) {
+    print_debug("AP: Doing secure_receive\n");
+
     byte data_buf[MAX_I2C_MESSAGE_LEN-1];
     byte auth_buf[MAX_I2C_MESSAGE_LEN-1];
 
@@ -248,12 +262,15 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
         return -1;
     }
 
+    print_debug("AP: Receiving First Packet\n");
+
     int ret = poll_and_receive_packet(address, data_buf);
     if (ret < SUCCESS_RETURN) {
         print_error("Error polling for first packet");
         return ret;
     }
 
+    print_debug("AP: Receiving Second Packet\n");
     ret = poll_and_receive_packet(address, auth_buf);
     if (ret < SUCCESS_RETURN) {
         print_error("Error polling for second packet");
@@ -273,6 +290,8 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
         print_error("Error decrypting message");
         return ERROR_RETURN;
     }
+
+    print_debug("AP: Finished secure_receive\n");
 
     session->receive_counter = auth.counter;
     return auth.length;
@@ -678,11 +697,6 @@ int attest_component(uint32_t component_id) {
 // YOUR DESIGN MUST NOT CHANGE THIS FUNCTION
 // Boot message is customized through the AP_BOOT_MSG macro
 void boot() {
-    // POST BOOT FUNCTIONALITY
-    // DO NOT REMOVE IN YOUR DESIGN
-    #ifdef POST_BOOT
-        POST_BOOT
-    #else
 
     print_debug("Testing secure send from AP");
     i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[0]);
@@ -707,6 +721,11 @@ void boot() {
 
     print_debug("Secure send and receive check working");
 
+    // POST BOOT FUNCTIONALITY
+    // DO NOT REMOVE IN YOUR DESIGN
+    #ifdef POST_BOOT
+        POST_BOOT
+    #else
 
     // Everything after this point is modifiable in your design
     // LED loop to show that boot occurred
