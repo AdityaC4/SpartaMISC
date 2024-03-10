@@ -290,6 +290,9 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
     int ret = poll_and_receive_packet(address, data_buf);
     if (ret < SUCCESS_RETURN) {
         print_error("Error polling for first packet");
+        if (booted) {
+            print_info("Error polling and receiving first packet: Error Code %d\n", ret);
+        }
         return ret;
     }
 
