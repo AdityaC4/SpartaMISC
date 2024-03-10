@@ -120,11 +120,6 @@ int booted = 0;
  * This function must be implemented by your team to align with the security requirements.
 */
 void secure_send(uint8_t* buffer, uint8_t len) {
-    #ifdef POST_BOOT
-        uint32_t sleeptime = 100000;
-        MXC_Delay(sleeptime);
-    #endif
-
     if (booted) {
         print_info("Component: Doing secure_send. Len: %d\n", len);
     }
@@ -168,6 +163,11 @@ void secure_send(uint8_t* buffer, uint8_t len) {
 
     // Send encrypted data
     send_packet_and_ack(len, send_buf);
+
+    #ifdef POST_BOOT
+        uint32_t sleeptime = 50000;
+        MXC_Delay(sleeptime);
+    #endif
 
     if (booted) {
         print_info("Component: Sent Packet\n");
