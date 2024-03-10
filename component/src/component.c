@@ -86,7 +86,8 @@ typedef struct {
 typedef struct {
     byte iv[CHACHA_IV_SIZE];
     byte tag[CHACHA_TAG_SIZE];
-    word32 counter; 
+    word32 counter;
+    int error_code;
     uint8_t length; 
 } message_auth;
 
@@ -126,9 +127,13 @@ void secure_send(uint8_t* buffer, uint8_t len) {
     byte send_buf[len];
     bzero(send_buf, sizeof(send_buf));
 
+    message_auth auth;
+    auth.error_code = 0;
+
     if (session.active != 1) {
         print_debug("Session is not active!");
-        return;
+        // return;
+        auth.error_code = -1; 
     }
 
     // IV 
@@ -138,8 +143,6 @@ void secure_send(uint8_t* buffer, uint8_t len) {
     // Tag 
     byte tag[CHACHA_TAG_SIZE];
     bzero(tag, CHACHA_TAG_SIZE);
-
-    message_auth auth;
 
     // Store IV
     memcpy(auth.iv, iv, CHACHA_IV_SIZE);
@@ -152,6 +155,7 @@ void secure_send(uint8_t* buffer, uint8_t len) {
     int ret = encrypt((byte* ) buffer, len, send_buf, session.key, iv, (byte *) &(auth.counter), sizeof(auth.counter), tag); 
     if (ret != 0) {
         print_debug("Failed to encrypt message: error code %d", ret);
+        auth.error_code = -2; 
     }
 
     // Store tag

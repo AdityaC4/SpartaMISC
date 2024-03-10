@@ -112,7 +112,8 @@ typedef struct {
 typedef struct {
     byte iv[CHACHA_IV_SIZE];
     byte tag[CHACHA_TAG_SIZE];
-    word32 counter; 
+    word32 counter;
+    int error_code;
     uint8_t length; 
 } message_auth;
 
@@ -185,6 +186,7 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
     session->send_counter++;
     auth.counter = session->send_counter;
     auth.length = len;
+    auth.error_code = 0; 
 
     // Encrypt data
     int ret = encrypt((byte* ) buffer, len, send_buf, session->key, iv, (byte *) &(auth.counter), sizeof(auth.counter), tag); 
@@ -303,6 +305,11 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
 
     message_auth auth;
     memcpy(&auth, auth_buf, sizeof(auth));
+
+    if (auth.error != 0) {
+        print_error("Error in auth! Found code %d", auth.error);
+        return ERROR_RETURN;
+    }
 
     if (auth.counter <= session->receive_counter) {
         print_error("Error! counter was less than receive counter");
