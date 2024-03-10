@@ -121,7 +121,7 @@ int booted = 0;
 */
 void secure_send(uint8_t* buffer, uint8_t len) {
     #ifdef POST_BOOT
-        uint32_t sleeptime = 500000;
+        uint32_t sleeptime = 50000;
         MXC_Delay(sleeptime);
     #endif
 
