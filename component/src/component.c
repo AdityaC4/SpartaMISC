@@ -164,11 +164,6 @@ void secure_send(uint8_t* buffer, uint8_t len) {
     // Send encrypted data
     send_packet_and_ack(len, send_buf);
 
-    #ifdef POST_BOOT
-        uint32_t sleeptime = 50000;
-        MXC_Delay(sleeptime);
-    #endif
-
     if (booted) {
         print_info("Component: Sent Packet\n");
     }
