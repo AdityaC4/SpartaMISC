@@ -446,9 +446,9 @@ void attempt_replace() {
     uint32_t component_id_in = 0;
     uint32_t component_id_out = 0;
 
-    recv_input("Component ID In: ", buf, 8);
+    recv_input("Component ID In: ", buf, 10);
     sscanf(buf, "%x", &component_id_in);
-    recv_input("Component ID Out: ", buf, 8);
+    recv_input("Component ID Out: ", buf, 10);
     sscanf(buf, "%x", &component_id_out);
 
     // Find the component to swap out
@@ -480,7 +480,7 @@ void attempt_attest() {
         return;
     }
     uint32_t component_id;
-    recv_input("Component ID: ", buf, 8);
+    recv_input("Component ID: ", buf, 10);
     sscanf(buf, "%x", &component_id);
     if (attest_component(component_id) == SUCCESS_RETURN) {
         print_success("Attest\n");
