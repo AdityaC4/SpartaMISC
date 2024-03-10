@@ -385,7 +385,7 @@ void boot() {
 // Compare the entered PIN to the correct PIN
 int validate_pin() {
     char buf[50];
-    recv_input("Enter pin: ", buf);
+    recv_input("Enter pin: ", buf, 6);
     // neesd to be fixed memory unsafe
     if (!strncmp(buf, AP_PIN, 6)) {
         print_debug("Pin Accepted!\n");
@@ -398,7 +398,7 @@ int validate_pin() {
 // Function to validate the replacement token
 int validate_token() {
     char buf[50];
-    recv_input("Enter token: ", buf);
+    recv_input("Enter token: ", buf, 8);
     // needs to be fixed memory unsafe
     if (!strncmp(buf, AP_TOKEN, 8)) {
         print_debug("Token Accepted!\n");
@@ -446,9 +446,9 @@ void attempt_replace() {
     uint32_t component_id_in = 0;
     uint32_t component_id_out = 0;
 
-    recv_input("Component ID In: ", buf);
+    recv_input("Component ID In: ", buf, 8);
     sscanf(buf, "%x", &component_id_in);
-    recv_input("Component ID Out: ", buf);
+    recv_input("Component ID Out: ", buf, 8);
     sscanf(buf, "%x", &component_id_out);
 
     // Find the component to swap out
@@ -480,7 +480,7 @@ void attempt_attest() {
         return;
     }
     uint32_t component_id;
-    recv_input("Component ID: ", buf);
+    recv_input("Component ID: ", buf, 8);
     sscanf(buf, "%x", &component_id);
     if (attest_component(component_id) == SUCCESS_RETURN) {
         print_success("Attest\n");
@@ -500,7 +500,7 @@ int main() {
     // Handle commands forever
     char buf[100];
     while (1) {
-        recv_input("Enter Command: ", buf);
+        recv_input("Enter Command: ", buf, 7);
 
         // Execute requested command
         if (!strncmp(buf, "list", 4)) {
