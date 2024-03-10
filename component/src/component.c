@@ -120,6 +120,10 @@ int booted = 0;
  * This function must be implemented by your team to align with the security requirements.
 */
 void secure_send(uint8_t* buffer, uint8_t len) {
+    #ifdef POST_BOOT
+        session.active = 1;
+    #endif
+
     if (booted) {
         print_info("Component: Doing secure_send. Len: %d\n", len);
     }
