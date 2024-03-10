@@ -306,8 +306,8 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
     message_auth auth;
     memcpy(&auth, auth_buf, sizeof(auth));
 
-    if (auth.error != 0) {
-        print_error("Error in auth! Found code %d", auth.error);
+    if (auth.error_code != 0) {
+        print_error("Error in auth! Found code %d", auth.error_code);
         return ERROR_RETURN;
     }
 
