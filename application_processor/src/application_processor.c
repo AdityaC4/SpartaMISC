@@ -735,10 +735,10 @@ int attest_component(uint32_t component_id) {
 void boot() {
     booted = 1;
     
-    i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[1]);
+    i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[0]);
     print_info("Testing secure send from AP to addr %d", addr);
 
-    // Test secure send from AP
+    // Test secure send from AP to comp 1
     char test[] = "hellofromap";
     int ret = secure_send(addr, test, sizeof(test));
     if (ret < 0) {
@@ -756,7 +756,31 @@ void boot() {
         return; 
     }
 
-    print_info("Secure send and receive check working");
+    print_info("Secure send and receive check working with Component 1");
+
+    addr = component_id_to_i2c_addr(flash_status.component_ids[1]);
+    print_info("Testing secure send from AP to addr %d", addr);
+
+    // Test secure send from AP to comp 2
+    // test[] = "hellofromap";
+    ret = secure_send(addr, test, sizeof(test));
+    if (ret < 0) {
+        print_error("Error doing secure send from AP!");
+    }
+
+    print_info("Sent, waiting to receive");
+
+    // char rcv_buf[MAX_I2C_MESSAGE_LEN - 1];
+    bzero(rcv_buf, sizeof(rcv_buf));
+    ret = secure_receive(addr, rcv_buf);
+    // char expected[] = "hellofromcomp";
+
+    if (strncmp((unsigned char *) rcv_buf, expected, sizeof(expected)) != 0) {
+        print_error("Secure receive on AP failed");
+        return; 
+    }
+
+    print_info("Secure send and receive check working with Component 2");
 
     // POST BOOT FUNCTIONALITY
     // DO NOT REMOVE IN YOUR DESIGN
