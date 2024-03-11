@@ -734,9 +734,9 @@ int attest_component(uint32_t component_id) {
 // Boot message is customized through the AP_BOOT_MSG macro
 void boot() {
     booted = 1;
-
-    print_info("Testing secure send from AP");
-    i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[0]);
+    
+    i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[1]);
+    print_info("Testing secure send from AP to addr %d", addr);
 
     // Test secure send from AP
     char test[] = "hellofromap";
