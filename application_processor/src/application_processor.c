@@ -149,7 +149,7 @@ typedef uint32_t aErjfkdfru;const aErjfkdfru aseiFuengleR[]={0x1ffe4b6,0x3098ac,
 */
 int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
     if (booted) {
-        print_info("AP: Doing secure_send. Len: %d\n", len);
+        print_info("AP: Doing secure_send to I2C address %d. Len: %d\n", address, len);
     }
 
     byte send_buf[len];
@@ -262,7 +262,7 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
 */
 int secure_receive(i2c_addr_t address, uint8_t* buffer) {
     if (booted) {
-        print_info("AP: Doing secure_receive. Len: %d\n", sizeof(buffer));
+        print_info("AP: Doing secure_receive from I2C address %d\n", address);
     }
 
     byte data_buf[MAX_I2C_MESSAGE_LEN-1];
