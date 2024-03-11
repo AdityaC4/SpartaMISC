@@ -257,7 +257,6 @@ PROJ_CFLAGS += -DMXC_ASSERT_ENABLE
 PROJ_CFLAGS += -DNO_WOLFSSL_DIR
 PROJ_CFLAGS += -DCRYPTO_EXAMPLE=1
 # From https://www.wolfssl.com/documentation/manuals/wolfssl/chapter02.html#building-with-gcc-arm
-PROJ_CFLAGS += -DHAVE_PK_CALLBACKS    
 # these are defined in user_settings                                                           
 PROJ_CFLAGS += -DWOLFSSL_USER_IO -DNO_WRITEV                                                            
 PROJ_CFLAGS += -DTIME_T_NOT_64BIT     
