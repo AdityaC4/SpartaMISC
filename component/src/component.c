@@ -161,6 +161,9 @@ void secure_send(uint8_t* buffer, uint8_t len) {
     // Store tag
     memcpy(auth.tag, tag, sizeof(tag));
 
+    // Send auth before
+    send_packet_and_ack(sizeof(auth), (byte *)&auth);
+
     // Send encrypted data
     send_packet_and_ack(len, send_buf);
 
@@ -168,8 +171,8 @@ void secure_send(uint8_t* buffer, uint8_t len) {
         print_info("Component: Sent Packet\n");
     }
 
-    // Send IV and authentication data
-    send_packet_and_ack(sizeof(auth), (byte *) &auth);
+    // // Send IV and authentication data
+    // send_packet_and_ack(sizeof(auth), (byte *) &auth);
 
     if (booted) {
         print_info("Component: Sent IV and Auth Data, ended secure_send\n");

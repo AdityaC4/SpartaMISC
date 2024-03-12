@@ -290,20 +290,7 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
         print_info("AP: Receiving First Packet\n");
     }
 
-    int ret = poll_and_receive_packet(address, data_buf);
-    if (ret < SUCCESS_RETURN) {
-        print_error("Error polling for first packet");
-        if (booted) {
-            print_info("Error polling and receiving first packet: Error Code %d\n", ret);
-        }
-        return ret;
-    }
-
-    if (booted) {
-        print_info("AP: Receiving Second Packet\n");
-    }
-
-    ret = poll_and_receive_packet(address, auth_buf);
+    int ret = poll_and_receive_packet(address, auth_buf);
     if (ret < SUCCESS_RETURN) {
         print_error("Error polling for second packet");
         return ret;
@@ -311,6 +298,23 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
 
     message_auth auth;
     memcpy(&auth, auth_buf, sizeof(auth));
+
+    print_info("Got auth, expecting data of length %d and counter is %d", auth.length, auth.counter);
+
+    if (booted) {
+        print_info("AP: Receiving Second Packet\n");
+    }
+
+    ret = poll_and_receive_packet(address, data_buf);
+    if (ret < SUCCESS_RETURN) {
+        print_error("Error polling for first packet");
+        if (booted) {
+            print_info(
+                "Error polling and receiving first packet: Error Code %d\n",
+                ret);
+        }
+        return ret;
+    }
 
     if (auth.error_code != 0) {
         print_error("Error in auth! Found code %d", auth.error_code);
