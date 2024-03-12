@@ -245,6 +245,25 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
         print_error("Error sending authenticated data");
     }
 
+    // Wait for a received message
+    char received_buf[MAX_I2C_MESSAGE_LEN - 1];
+    char expected2[] = "received";
+
+    if (booted) {
+        print_info("AP: Waiting for Received Message\n");
+    }
+
+    ret = poll_and_receive_packet(address, received_buf);
+    if (ret < SUCCESS_RETURN) {
+        print_error("Error polling for received packet");
+        return ret;
+    }
+
+    if (strncmp(received_buf, expected2, sizeof(expected2) != 0)) {
+        print_error("Received packet does not match!");
+        return -1;
+    }
+
     if (booted) {
         print_info("AP: Finished secure_send\n");
     }

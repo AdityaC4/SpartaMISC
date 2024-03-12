@@ -234,6 +234,13 @@ int secure_receive(uint8_t* buffer) {
         print_info("Component: Received Second Packet\n");
     }
 
+    char received_msg[] = "received";
+    send_packet_and_ack(sizeof(received_msg), received_msg);
+
+    if (booted) {
+        print_info("Component: Sent Received Message\n");
+    }
+
     message_auth auth;
     memcpy(&auth, auth_buf, sizeof(auth));
 
