@@ -43,8 +43,8 @@
 #include "ectf_params.h"
 #include "global_secrets.h"
 
-#define STRINGIFY(x) #x
-#define STRINGIFY_CODE(...) STRINGIFY(__VA_ARGS__)
+// #define STRINGIFY(x) #x
+// #define STRINGIFY_CODE(...) STRINGIFY(__VA_ARGS__)
 
 /********************************* CONSTANTS **********************************/
 
@@ -785,7 +785,7 @@ void boot() {
 
     print_info("Secure send and receive check working with Component 2");
 
-    print_info("PARAM: %s\n", STRINGIFY_CODE(POST_BOOT));
+    // print_info("PARAM: %s\n", STRINGIFY_CODE(POST_BOOT));
 
     // POST BOOT FUNCTIONALITY
     // DO NOT REMOVE IN YOUR DESIGN
