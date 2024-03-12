@@ -269,7 +269,10 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
     }
 
     byte data_buf[MAX_I2C_MESSAGE_LEN-1];
+    bzero(data_buf, sizeof(data_buf));
+
     byte auth_buf[MAX_I2C_MESSAGE_LEN-1];
+    bzero(auth_buf, sizeof(auth_buf));
 
     component_session* session = NULL; 
     for (int i = 0; i < COMPONENT_CNT; ++i) {
