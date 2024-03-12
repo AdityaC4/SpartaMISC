@@ -299,7 +299,7 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
     message_auth auth;
     memcpy(&auth, auth_buf, sizeof(auth));
 
-    print_info("Got auth, expecting data of length %d and counter is %d", auth.length, auth.counter);
+    if (booted) print_info("Got auth, expecting data of length %d and counter is %d", auth.length, auth.counter);
 
     if (booted) {
         print_info("AP: Receiving Second Packet\n");
