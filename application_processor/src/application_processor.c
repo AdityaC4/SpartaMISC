@@ -417,10 +417,12 @@ int validate_pin() {
 
     if (isDelayed) {
         MXC_TRNG_Init();
+        print_debug("Delaying PIN validation...\n");
         // Random sleep time between 3 and 4.8 seconds for side-channel reasons
         uint32_t sleeptime = ((uint32_t(MXC_TRNG_RandomInt())) % 1800000) + 3000000;
         MXC_TRNG_Shutdown();
         MXC_Delay(sleeptime);
+        print_debug("PIN validation delay complete\n");
     }
 
     char buf[50];
@@ -457,11 +459,13 @@ int validate_token() {
     flash_simple_erase_page(DELAY_FLASH_ADDR_TOKEN);
     flash_simple_write(DELAY_FLASH_ADDR_TOKEN, (uint32_t*)&delay_status_token, sizeof(smaller_flash_entry));
     if (isDelayed) {
+        print_debug("Delaying token validation...\n")
         MXC_TRNG_Init();
         // Random sleep time between 3 and 4.8 seconds for side-channel reasons
         uint32_t sleeptime = ((uint32_t(MXC_TRNG_RandomInt())) % 1800000) + 3000000;
         MXC_TRNG_Shutdown();
         MXC_Delay(sleeptime);
+        print_debug("Token validation delay complete\n");
     }
 
     char buf[50];
