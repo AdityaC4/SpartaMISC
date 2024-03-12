@@ -55,6 +55,7 @@
 
 // Flash Macros
 #define FLASH_ADDR ((MXC_FLASH_MEM_BASE + MXC_FLASH_MEM_SIZE) - (2 * MXC_FLASH_PAGE_SIZE))
+// Defining two addresses for where we store delay status of PIN and token validation
 #define DELAY_FLASH_ADDR_PIN ((MXC_FLASH_MEM_BASE + MXC_FLASH_MEM_SIZE) - (10*MXC_FLASH_PAGE_SIZE))
 #define DELAY_FLASH_ADDR_TOKEN ((MXC_FLASH_MEM_BASE + MXC_FLASH_MEM_SIZE) - (4*MXC_FLASH_PAGE_SIZE))
 #define FLASH_MAGIC 0xDEADBEEF
@@ -89,7 +90,7 @@ typedef struct {
     uint32_t component_cnt;
     uint32_t component_ids[32];
 } flash_entry;
-
+// Smaller version of flash entry for delay status
 typedef struct {
     uint32_t flash_magic;
 } smaller_flash_entry;
@@ -106,6 +107,7 @@ typedef enum {
 /********************************* GLOBAL VARIABLES **********************************/
 // Variable for information stored in flash memory
 flash_entry flash_status;
+// Delay status variabels which we read into from flash, or write to flash with
 smaller_flash_entry delay_status_pin;
 smaller_flash_entry delay_status_token;
 
@@ -188,6 +190,7 @@ void init() {
             COMPONENT_CNT*sizeof(uint32_t));
 
         flash_simple_write(FLASH_ADDR, (uint32_t*)&flash_status, sizeof(flash_entry));
+        // Erases our delay status flash addresses in case they were written to before boot
         flash_simple_erase_page(DELAY_FLASH_ADDR_PIN);
         flash_simple_erase_page(DELAY_FLASH_ADDR_TOKEN);
     }
@@ -395,22 +398,26 @@ void boot() {
 // Compare the entered PIN to the correct PIN
 int validate_pin() {
     uint8_t isDelayed;
+    // Read into delay_status_pin from flash
     flash_simple_read(DELAY_FLASH_ADDR_PIN, (uint32_t*)&delay_status_pin, sizeof(smaller_flash_entry));
-
+    // If the flash magic is not set, set the local isDelayed to 0
+    // Else, set isDelayed to 1
     if (delay_status_pin.flash_magic != FLASH_MAGIC) {
         isDelayed = 0;
+        // Make sure flash_magic is set to FLASH_MAGIC for next time (do the delay) until a correct PIN attempt
         delay_status_pin.flash_magic = FLASH_MAGIC;
     }
 
     else {
         isDelayed = 1;
     }
-
+    // Write the variable to flash BEFORE attempt to prevent circumvention
     flash_simple_erase_page(DELAY_FLASH_ADDR_PIN);
     flash_simple_write(DELAY_FLASH_ADDR_PIN, (uint32_t*)&delay_status_pin, sizeof(smaller_flash_entry));
 
     if (isDelayed) {
         MXC_TRNG_Init();
+        // Random sleep time between 3 and 4.8 seconds for side-channel reasons
         uint32_t sleeptime = (MXC_TRNG_RandomInt() % 1800000) + 3000000;
         MXC_TRNG_Shutdown();
         MXC_Delay(sleeptime);
@@ -419,6 +426,7 @@ int validate_pin() {
     char buf[50];
     recv_input("Enter pin: ", buf, 7);
     if (!strncmp(buf, AP_PIN, 6)) {
+        // Successful PIN attempt, erase the delay status, no longer under attack
         flash_simple_erase_page(DELAY_FLASH_ADDR_PIN);        
         print_debug("Pin Accepted!\n");
         return SUCCESS_RETURN;
@@ -432,21 +440,25 @@ int validate_pin() {
 // Function to validate the replacement token
 int validate_token() {
     uint8_t isDelayed;
+    // Read into token_status_pin from flash
     flash_simple_read(DELAY_FLASH_ADDR_TOKEN, (uint32_t*)&delay_status_token, sizeof(smaller_flash_entry));
-
+    // If the flash magic is not set, set the local isDelayed to 0
+    // Else, set isDelayed to 1
     if (delay_status_token.flash_magic != FLASH_MAGIC) {
         isDelayed = 0;
+        // Make sure flash_magic is set to FLASH_MAGIC for next time (do the delay) until a correct token attempt
         delay_status_token.flash_magic = FLASH_MAGIC;
     }
 
     else {
         isDelayed = 1;
     }
-
+    // Write the variable to flash BEFORE attempt to prevent circumvention
     flash_simple_erase_page(DELAY_FLASH_ADDR_TOKEN);
     flash_simple_write(DELAY_FLASH_ADDR_TOKEN, (uint32_t*)&delay_status_token, sizeof(smaller_flash_entry));
     if (isDelayed) {
         MXC_TRNG_Init();
+        // Random sleep time between 3 and 4.8 seconds for side-channel reasons
         uint32_t sleeptime = (MXC_TRNG_RandomInt() % 1800000) + 3000000;
         MXC_TRNG_Shutdown();
         MXC_Delay(sleeptime);
@@ -455,6 +467,7 @@ int validate_token() {
     char buf[50];
     recv_input("Enter token: ", buf, 9);
     if (!strncmp(buf, AP_TOKEN, 8)) {
+        // Successful token attempt, erase the delay status, no longer under attack
         flash_simple_erase_page(DELAY_FLASH_ADDR_TOKEN);
         print_debug("Token Accepted!\n");
         return SUCCESS_RETURN;
