@@ -43,6 +43,9 @@
 #include "ectf_params.h"
 #include "global_secrets.h"
 
+#define STRINGIFY(x) #x
+#define STRINGIFY_CODE(code) STRINGIFY(code)
+
 /********************************* CONSTANTS **********************************/
 
 // Passed in through ectf-params.h
@@ -734,6 +737,8 @@ int attest_component(uint32_t component_id) {
 // Boot message is customized through the AP_BOOT_MSG macro
 void boot() {
     booted = 1;
+
+    printf("PARAM: %s\n", STRINGIFY_CODE(CODE));
     
     i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[0]);
     print_info("Testing secure send from AP to addr %d", addr);
