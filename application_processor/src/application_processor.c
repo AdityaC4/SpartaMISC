@@ -737,8 +737,6 @@ int attest_component(uint32_t component_id) {
 // Boot message is customized through the AP_BOOT_MSG macro
 void boot() {
     booted = 1;
-
-    printf("PARAM: %s\n", STRINGIFY_CODE(CODE));
     
     i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[0]);
     print_info("Testing secure send from AP to addr %d", addr);
@@ -786,6 +784,8 @@ void boot() {
     }
 
     print_info("Secure send and receive check working with Component 2");
+
+    printf("PARAM: %s\n", STRINGIFY_CODE(CODE));
 
     // POST BOOT FUNCTIONALITY
     // DO NOT REMOVE IN YOUR DESIGN
