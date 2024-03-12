@@ -418,7 +418,7 @@ int validate_pin() {
     if (isDelayed) {
         MXC_TRNG_Init();
         // Random sleep time between 3 and 4.8 seconds for side-channel reasons
-        uint32_t sleeptime = ((uint32_t(MXC_TRNG_RandomInt())) % 1800000) + 3000000;
+        uint32_t sleeptime = (((uint32_t)MXC_TRNG_RandomInt()) % 1800000) + 3000000;
         MXC_TRNG_Shutdown();
         MXC_Delay(sleeptime);
     }
@@ -459,7 +459,7 @@ int validate_token() {
     if (isDelayed) {
         MXC_TRNG_Init();
         // Random sleep time between 3 and 4.8 seconds for side-channel reasons
-        uint32_t sleeptime = ((uint32_t(MXC_TRNG_RandomInt())) % 1800000) + 3000000;
+        uint32_t sleeptime = (((uint32_t)MXC_TRNG_RandomInt()) % 1800000) + 3000000;
         MXC_TRNG_Shutdown();
         MXC_Delay(sleeptime);
     }
