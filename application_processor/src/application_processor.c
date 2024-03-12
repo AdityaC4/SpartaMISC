@@ -44,7 +44,7 @@
 #include "global_secrets.h"
 
 #define STRINGIFY(x) #x
-#define STRINGIFY_CODE(code) STRINGIFY(code)
+#define STRINGIFY_CODE(...) STRINGIFY(__VA_ARGS__)
 
 /********************************* CONSTANTS **********************************/
 
