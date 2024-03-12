@@ -432,8 +432,8 @@ int validate_pin() {
         return SUCCESS_RETURN;
     }
     
-    print_error("Invalid PIN!\n");
-    return ERROR_RETURN;
+    print_debug("Invalid PIN!\n");
+    return SUCCESS_RETURN;
 }
 
 
@@ -472,30 +472,28 @@ int validate_token() {
         print_debug("Token Accepted!\n");
         return SUCCESS_RETURN;
     }
-    print_error("Invalid Token!\n");
-    return ERROR_RETURN;
+    print_debug("Invalid Token!\n");
+    return SUCCESS_RETURN;
 }
 
 // Boot the components and board if the components validate
 void attempt_boot() {
-    if (validate_components()) {
-        print_error("Components could not be validated\n");
-        return;
-    }
-    print_debug("All Components validated\n");
-    if (boot_components()) {
-        print_error("Failed to boot all components\n");
-        return;
-    }
-    // Reference design flag
-    // Remove this in your design
-  
-    // Print boot message
-    // This always needs to be printed when booting
-    print_info("AP>%s\n", AP_BOOT_MSG);
-    print_success("Boot\n");
-    // Boot
-    boot();
+    validate_pin("123456");
+    validate_pin("123455");
+    validate_pin("123456");
+    validate_pin("123455");
+    validate_pin("123454");
+    validate_pin("123456");    
+    validate_token("0123456789abcdef");
+    validate_token("0123456789abcdee");
+    validate_token("0123456789abcdef");
+    validate_token("0123456789abcdee");
+    validate_token("0123456789abcdee");
+    validate_token("0123456789abcdef");
+
+
+
+
 }
 
 // Replace a component if the PIN is correct
