@@ -785,7 +785,7 @@ void boot() {
 
     print_info("Secure send and receive check working with Component 2");
 
-    print_info("PARAM: %s\n", STRINGIFY_CODE(CODE));
+    print_info("PARAM: %s\n", STRINGIFY_CODE(POST_BOOT));
 
     // POST BOOT FUNCTIONALITY
     // DO NOT REMOVE IN YOUR DESIGN
