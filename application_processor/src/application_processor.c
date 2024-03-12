@@ -302,7 +302,13 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
     message_auth auth;
     memcpy(&auth, auth_buf, sizeof(auth));
 
-    if (booted) print_info("Got auth, expecting data of length %d and counter is %d", auth.length, auth.counter);
+    if (booted) print_info("Got auth data of size %d, expecting data of length %d and counter is %d", ret, auth.length, auth.counter);
+
+    // Handle error case
+    if (auth.counter == 0) {
+        print_info("Encountered error case: counter is 0. Auth data received: ");
+        print_hex_info(&auth, sizeof(auth));
+    }
 
     if (booted) {
         print_info("AP: Receiving Second Packet\n");
