@@ -342,20 +342,6 @@ int do_handshake(byte* hello_buffer) {
 void boot() {
     booted = 1;
 
-    print_debug("Testing secure receive on component");
-    // TEST - check secure receive for component
-    bzero(receive_buffer, MAX_I2C_MESSAGE_LEN);
-    secure_receive(receive_buffer);
-    char expected[] = "hellofromap";
-
-    if (strncmp((unsigned char *) receive_buffer, expected, sizeof(expected)) != 0) {
-        print_error("Secure receive on component failed");
-        return; 
-    }
-
-    char comptest[] = "hellofromcomp";
-    secure_send(comptest, sizeof(comptest));
-
     // POST BOOT FUNCTIONALITY
     // DO NOT REMOVE IN YOUR DESIGN
     #ifdef POST_BOOT
