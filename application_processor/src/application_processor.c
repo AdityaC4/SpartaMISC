@@ -397,6 +397,19 @@ int get_provisioned_ids(uint32_t* buffer) {
 
 /********************************* UTILITIES **********************************/
 
+// Compare two buffers with no time leakage
+int secure_cmp(char *buf, char *passcode, int len) {
+    // Similar to strcmp, if it's sucessful it returns 0
+    int success = 0;
+
+    for (int i = 0; i < len; i++) {
+        if (buf[i] != passcode[i]) {
+            success = 1;
+        }
+    }
+    return success;
+}
+
 // Initialize the device
 // This must be called on startup to initialize the flash and i2c interfaces
 void init() {
@@ -893,7 +906,7 @@ int validate_pin() {
 
     char buf[50];
     recv_input("Enter pin: ", buf, 7);
-    if (!strncmp(buf, AP_PIN, 6)) {
+    if (!secure_cmp(buf, AP_PIN, 6)) {
         // Successful PIN attempt, erase the delay status, no longer under
         // attack
         flash_simple_erase_page(DELAY_FLASH_ADDR_PIN);
@@ -938,7 +951,7 @@ int validate_token() {
 
     char buf[50];
     recv_input("Enter token: ", buf, 9);
-    if (!strncmp(buf, AP_TOKEN, 8)) {
+    if (!secure_cmp(buf, AP_TOKEN, 8)) {
         // Successful token attempt, erase the delay status, no longer under attack
         flash_simple_erase_page(DELAY_FLASH_ADDR_TOKEN);
         print_debug("Token Accepted!\n");
