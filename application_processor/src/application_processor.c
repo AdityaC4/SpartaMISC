@@ -64,6 +64,10 @@
 #define SUCCESS_RETURN 0
 #define ERROR_RETURN -1
 
+// Sizes of token and pin in bytes
+#define AP_PIN_LEN 6
+#define AP_TOKEN_LEN 16
+
 /******************************** TYPE DEFINITIONS ********************************/
 // Data structure for sending commands to component
 // Params allows for up to MAX_I2C_MESSAGE_LEN - 1 bytes to be send
@@ -213,6 +217,21 @@ int issue_cmd(i2c_addr_t addr, uint8_t* transmit, uint8_t* receive) {
         return ERROR_RETURN;
     }
     return len;
+}
+
+
+// Compare two buffers with no time leakage
+int secure_cmp(char * buf, char * passcode, int len) {
+    // Similar to strcmp, if it's sucessful it returns 0
+    int success = 0;
+
+    for (int i = 0; i < len; i++) {
+        if (buf[i] != passcode[i])
+        {
+            success = 1;
+        }
+    }
+    return success;
 }
 
 /******************************** COMPONENT COMMS ********************************/
@@ -423,9 +442,9 @@ int validate_pin() {
         MXC_Delay(sleeptime);
     }
 
-    char buf[50];
-    recv_input("Enter pin: ", buf, 7);
-    if (!strncmp(buf, AP_PIN, 6)) {
+    char buf[AP_PIN_LEN + 1];
+    recv_input("Enter pin: ", buf, AP_PIN_LEN + 1);
+    if (!strncmp(buf, AP_PIN, AP_PIN_LEN)) {
         // Successful PIN attempt, erase the delay status, no longer under attack
         flash_simple_erase_page(DELAY_FLASH_ADDR_PIN);        
         print_debug("Pin Accepted!\n");
@@ -464,9 +483,9 @@ int validate_token() {
         MXC_Delay(sleeptime);
     }
 
-    char buf[50];
-    recv_input("Enter token: ", buf, 9);
-    if (!strncmp(buf, AP_TOKEN, 8)) {
+    char buf[AP_TOKEN_LEN+1];
+    recv_input("Enter token: ", buf, AP_TOKEN_LEN+1);
+    if (!secure_cmp(buf, AP_TOKEN, AP_TOKEN_LEN)) {
         // Successful token attempt, erase the delay status, no longer under attack
         flash_simple_erase_page(DELAY_FLASH_ADDR_TOKEN);
         print_debug("Token Accepted!\n");
