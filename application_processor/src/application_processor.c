@@ -179,6 +179,12 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
 
     // IV 
     byte iv[CHACHA_IV_SIZE];
+    MXC_TRNG_Init();
+    while(MXC_TRNG_HealthTest() == 0){
+        print_debug("TRNG health check failed, attack detected, delaying\n");
+        MXC_Delay(4500000);
+    }
+    MXC_TRNG_Shutdown();
     wc_GenerateSeed(NULL, iv, CHACHA_IV_SIZE); // Initialize IV value using MXC TRNG 
 
     // Tag 
