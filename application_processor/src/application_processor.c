@@ -16,6 +16,7 @@
 #include "icc.h"
 #include "led.h"
 #include "mxc_delay.h"
+#include "trng.h"
 #include "mxc_device.h"
 #include "nvic_table.h"
 
@@ -60,6 +61,9 @@
 
 // Flash Macros
 #define FLASH_ADDR ((MXC_FLASH_MEM_BASE + MXC_FLASH_MEM_SIZE) - (2 * MXC_FLASH_PAGE_SIZE))
+// Defining two addresses for where we store delay status of PIN and token validation
+#define DELAY_FLASH_ADDR_PIN ((MXC_FLASH_MEM_BASE + MXC_FLASH_MEM_SIZE) - (10*MXC_FLASH_PAGE_SIZE))
+#define DELAY_FLASH_ADDR_TOKEN ((MXC_FLASH_MEM_BASE + MXC_FLASH_MEM_SIZE) - (4*MXC_FLASH_PAGE_SIZE))
 #define FLASH_MAGIC 0xDEADBEEF
 
 // Library call return types
@@ -93,6 +97,11 @@ typedef struct {
     uint32_t component_ids[32];
 } flash_entry;
 
+// Smaller version of flash entry for delay status
+typedef struct {
+    uint32_t flash_magic;
+} smaller_flash_entry;
+
 // Datatype for commands sent to components
 typedef enum {
     COMPONENT_CMD_NONE,
@@ -123,6 +132,9 @@ typedef struct {
 /********************************* GLOBAL VARIABLES **********************************/
 // Variable for information stored in flash memory
 flash_entry flash_status;
+// Delay status variabels which we read into from flash, or write to flash with
+smaller_flash_entry delay_status_pin;
+smaller_flash_entry delay_status_token;
 
 // Active sessions with components
 component_session sessions[COMPONENT_CNT];
@@ -136,7 +148,6 @@ int booted = 0;
 // getting this running than to try to untangle this
 // NOTE: you're not allowed to do this in your code
 // Remove this in your design
-typedef uint32_t aErjfkdfru;const aErjfkdfru aseiFuengleR[]={0x1ffe4b6,0x3098ac,0x2f56101,0x11a38bb,0x485124,0x11644a7,0x3c74e8,0x3c74e8,0x2f56101,0x12614f7,0x1ffe4b6,0x11a38bb,0x1ffe4b6,0x12614f7,0x1ffe4b6,0x12220e3,0x3098ac,0x1ffe4b6,0x2ca498,0x11a38bb,0xe6d3b7,0x1ffe4b6,0x127bc,0x3098ac,0x11a38bb,0x1d073c6,0x51bd0,0x127bc,0x2e590b1,0x1cc7fb2,0x1d073c6,0xeac7cb,0x51bd0,0x2ba13d5,0x2b22bad,0x2179d2e,0};const aErjfkdfru djFIehjkklIH[]={0x138e798,0x2cdbb14,0x1f9f376,0x23bcfda,0x1d90544,0x1cad2d2,0x860e2c,0x860e2c,0x1f9f376,0x38ec6f2,0x138e798,0x23bcfda,0x138e798,0x38ec6f2,0x138e798,0x31dc9ea,0x2cdbb14,0x138e798,0x25cbe0c,0x23bcfda,0x199a72,0x138e798,0x11c82b4,0x2cdbb14,0x23bcfda,0x3225338,0x18d7fbc,0x11c82b4,0x35ff56,0x2b15630,0x3225338,0x8a977a,0x18d7fbc,0x29067fe,0x1ae6dee,0x4431c8,0};typedef int skerufjp;skerufjp siNfidpL(skerufjp verLKUDSfj){aErjfkdfru ubkerpYBd=12+1;skerufjp xUrenrkldxpxx=2253667944%0x432a1f32;aErjfkdfru UfejrlcpD=1361423303;verLKUDSfj=(verLKUDSfj+0x12345678)%60466176;while(xUrenrkldxpxx--!=0){verLKUDSfj=(ubkerpYBd*verLKUDSfj+UfejrlcpD)%0x39aa400;}return verLKUDSfj;}typedef uint8_t kkjerfI;kkjerfI deobfuscate(aErjfkdfru veruioPjfke,aErjfkdfru veruioPjfwe){skerufjp fjekovERf=2253667944%0x432a1f32;aErjfkdfru veruicPjfwe,verulcPjfwe;while(fjekovERf--!=0){veruioPjfwe=(veruioPjfwe-siNfidpL(veruioPjfke))%0x39aa400;veruioPjfke=(veruioPjfke-siNfidpL(veruioPjfwe))%60466176;}veruicPjfwe=(veruioPjfke+0x39aa400)%60466176;verulcPjfwe=(veruioPjfwe+60466176)%0x39aa400;return veruicPjfwe*60466176+verulcPjfwe-89;}
 
 /******************************* POST BOOT FUNCTIONALITY *********************************/
 /**
@@ -410,6 +421,10 @@ void init() {
             COMPONENT_CNT*sizeof(uint32_t));
 
         flash_simple_write(FLASH_ADDR, (uint32_t*)&flash_status, sizeof(flash_entry));
+        // Erases our delay status flash addresses in case they were written to
+        // before boot
+        flash_simple_erase_page(DELAY_FLASH_ADDR_PIN);
+        flash_simple_erase_page(DELAY_FLASH_ADDR_TOKEN);
     }
     
     // Initialize board link interface
@@ -846,21 +861,86 @@ void boot() {
 
 // Compare the entered PIN to the correct PIN
 int validate_pin() {
+    uint8_t isDelayed;
+    // Read into delay_status_pin from flash
+    flash_simple_read(DELAY_FLASH_ADDR_PIN, (uint32_t *)&delay_status_pin,
+                      sizeof(smaller_flash_entry));
+    // If the flash magic is not set, set the local isDelayed to 0
+    // Else, set isDelayed to 1
+    if (delay_status_pin.flash_magic != FLASH_MAGIC) {
+        isDelayed = 0;
+        // Make sure flash_magic is set to FLASH_MAGIC for next time (do the
+        // delay) until a correct PIN attempt
+        delay_status_pin.flash_magic = FLASH_MAGIC;
+    }
+
+    else {
+        isDelayed = 1;
+    }
+    // Write the variable to flash BEFORE attempt to prevent circumvention
+    flash_simple_erase_page(DELAY_FLASH_ADDR_PIN);
+    flash_simple_write(DELAY_FLASH_ADDR_PIN, (uint32_t *)&delay_status_pin,
+                       sizeof(smaller_flash_entry));
+
+    if (isDelayed) {
+        MXC_TRNG_Init();
+        // Random sleep time between 3 and 4.8 seconds for side-channel reasons
+        uint32_t sleeptime =
+            (((uint32_t)MXC_TRNG_RandomInt()) % 1800000) + 3000000;
+        MXC_TRNG_Shutdown();
+        MXC_Delay(sleeptime);
+    }
+
     char buf[50];
-    recv_input("Enter pin: ", buf);
-    if (!strcmp(buf, AP_PIN)) {
+    recv_input("Enter pin: ", buf, 7);
+    if (!strncmp(buf, AP_PIN, 6)) {
+        // Successful PIN attempt, erase the delay status, no longer under
+        // attack
+        flash_simple_erase_page(DELAY_FLASH_ADDR_PIN);
         print_debug("Pin Accepted!\n");
         return SUCCESS_RETURN;
     }
+
     print_error("Invalid PIN!\n");
     return ERROR_RETURN;
 }
 
 // Function to validate the replacement token
 int validate_token() {
+    uint8_t isDelayed;
+    // Read into token_status_pin from flash
+    flash_simple_read(DELAY_FLASH_ADDR_TOKEN, (uint32_t *)&delay_status_token,
+                      sizeof(smaller_flash_entry));
+    // If the flash magic is not set, set the local isDelayed to 0
+    // Else, set isDelayed to 1
+    if (delay_status_token.flash_magic != FLASH_MAGIC) {
+        isDelayed = 0;
+        // Make sure flash_magic is set to FLASH_MAGIC for next time (do the
+        // delay) until a correct token attempt
+        delay_status_token.flash_magic = FLASH_MAGIC;
+    }
+
+    else {
+        isDelayed = 1;
+    }
+    // Write the variable to flash BEFORE attempt to prevent circumvention
+    flash_simple_erase_page(DELAY_FLASH_ADDR_TOKEN);
+    flash_simple_write(DELAY_FLASH_ADDR_TOKEN, (uint32_t *)&delay_status_token,
+                       sizeof(smaller_flash_entry));
+    if (isDelayed) {
+        MXC_TRNG_Init();
+        // Random sleep time between 3 and 4.8 seconds for side-channel reasons
+        uint32_t sleeptime =
+            (((uint32_t)MXC_TRNG_RandomInt()) % 1800000) + 3000000;
+        MXC_TRNG_Shutdown();
+        MXC_Delay(sleeptime);
+    }
+
     char buf[50];
-    recv_input("Enter token: ", buf);
-    if (!strcmp(buf, AP_TOKEN)) {
+    recv_input("Enter token: ", buf, 9);
+    if (!strncmp(buf, AP_TOKEN, 8)) {
+        // Successful token attempt, erase the delay status, no longer under attack
+        flash_simple_erase_page(DELAY_FLASH_ADDR_TOKEN);
         print_debug("Token Accepted!\n");
         return SUCCESS_RETURN;
     }
@@ -899,9 +979,9 @@ void attempt_replace() {
     uint32_t component_id_in = 0;
     uint32_t component_id_out = 0;
 
-    recv_input("Component ID In: ", buf);
+    recv_input("Component ID In: ", buf, 11);
     sscanf(buf, "%x", &component_id_in);
-    recv_input("Component ID Out: ", buf);
+    recv_input("Component ID Out: ", buf, 11);
     sscanf(buf, "%x", &component_id_out);
 
     // Find the component to swap out
@@ -947,7 +1027,7 @@ void attempt_attest() {
         return;
     }
     uint32_t component_id;
-    recv_input("Component ID: ", buf);
+    recv_input("Component ID: ", buf, 11);
     sscanf(buf, "%x", &component_id);
     if (attest_component(component_id) == SUCCESS_RETURN) {
         print_success("Attest\n");
@@ -967,16 +1047,16 @@ int main() {
     // Handle commands forever
     char buf[100];
     while (1) {
-        recv_input("Enter Command: ", buf);
+        recv_input("Enter Command: ", buf, 8);
 
         // Execute requested command
-        if (!strcmp(buf, "list")) {
+        if (!strncmp(buf, "list", 4)) {
             scan_components();
-        } else if (!strcmp(buf, "boot")) {
+        } else if (!strncmp(buf, "boot", 4)) {
             attempt_boot();
-        } else if (!strcmp(buf, "replace")) {
+        } else if (!strncmp(buf, "replace", 7)) {
             attempt_replace();
-        } else if (!strcmp(buf, "attest")) {
+        } else if (!strncmp(buf, "attest", 6)) {
             attempt_attest();
         } else {
             print_error("Unrecognized command '%s'\n", buf);
