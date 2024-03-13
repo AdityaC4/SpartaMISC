@@ -10,7 +10,8 @@ The handshake uses the following cryptographic systems documented in `crypto_pub
 1) Ed25519 used for signing and verification of device certificates and challenge-response
 2) Curve25519 used for the key exchange in Elliptic Curve Diffie-Hellman and derivation of the shared secret for symmetric communication
 
-The symmetric communications utilize the ChaCha20 stream cipher along with Poly1305 message authentication codes for a system that provides AEAD.  
+The symmetric communications utilize the ChaCha20 stream cipher along with Poly1305 message authentication codes for a system that provides AEAD (documented in `crypto_encryption.h`).  
+
 The above suites were chosen for speed and resource efficiency which were important to meet the specified time requirements on the target hardware.  
 
 ## Notes
