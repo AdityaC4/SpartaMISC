@@ -21,10 +21,6 @@ def main():
     with open(ectf_params_path, "r") as f:
         data = f.read()
 
-        # debugging
-        # print("HEADER CONTENTS")
-        # print(data)
-
         match = regex.search(data)
         if match:
             print(f"Matched component ID string: {match.group(1)}")
@@ -68,17 +64,16 @@ def main():
     # Get component public key in DER format
     comp_public_key_der = comp_public_key.export_key(format='DER')
 
-    print("HELLO FROM BUILD.PY")
-    print(f"HOST PUBLIC KEY DER of length {len(host_public_key_der)}:")
-    print(host_public_key_der)
-    print(f"COMP PUBLIC KEY DER of length {len(comp_public_key_der)} :")
-    print(comp_public_key_der)
-    print(f"CERTIFICATE DATA OF LENGTH {len(cert_data)}")
-    print(cert_data)
-    print(f"CERTIFICATE HASH OF LENGTH {len(h.digest())}")
-    print(h.hexdigest())
-    print(f"SIGNATURE OF CERTIFICATE of length {len(signature)}:")
-    print(binascii.hexlify(bytearray(signature)))
+    # print(f"HOST PUBLIC KEY DER of length {len(host_public_key_der)}:")
+    # print(host_public_key_der)
+    # print(f"COMP PUBLIC KEY DER of length {len(comp_public_key_der)} :")
+    # print(comp_public_key_der)
+    # print(f"CERTIFICATE DATA OF LENGTH {len(cert_data)}")
+    # print(cert_data)
+    # print(f"CERTIFICATE HASH OF LENGTH {len(h.digest())}")
+    # print(h.hexdigest())
+    # print(f"SIGNATURE OF CERTIFICATE of length {len(signature)}:")
+    # print(binascii.hexlify(bytearray(signature)))
 
     to_bytearray = lambda d: ','.join(hex(b) for b in d)
 

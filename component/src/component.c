@@ -29,7 +29,7 @@
 #include "global_secrets.h"
 
 #include "crypto_encryption.h"
-#include "crypto_test.h"
+#include "crypto_publickey.h"
 
 #ifdef POST_BOOT
 #include "led.h"
@@ -120,10 +120,6 @@ int booted = 0;
  * This function must be implemented by your team to align with the security requirements.
 */
 void secure_send(uint8_t* buffer, uint8_t len) {
-    if (booted) {
-        print_info("Component: Doing secure_send. Len: %d\n", len);
-    }
-
     byte send_buf[len];
     bzero(send_buf, sizeof(send_buf));
 
@@ -167,17 +163,6 @@ void secure_send(uint8_t* buffer, uint8_t len) {
     // Send encrypted data
     send_packet_and_ack(len, send_buf);
 
-    if (booted) {
-        print_info("Component: Sent Packet\n");
-    }
-
-    // // Send IV and authentication data
-    // send_packet_and_ack(sizeof(auth), (byte *) &auth);
-
-    if (booted) {
-        print_info("Component: Sent IV and Auth Data, ended secure_send\n");
-    }
-
     return;
 }
 
@@ -192,10 +177,6 @@ void secure_send(uint8_t* buffer, uint8_t len) {
  * This function must be implemented by your team to align with the security requirements.
 */
 int secure_receive(uint8_t* buffer) {
-    if (booted) {
-        print_info("Component: Doing secure_receive\n");
-    }
-
     byte data_buf[MAX_I2C_MESSAGE_LEN-1];
     byte auth_buf[MAX_I2C_MESSAGE_LEN-1];
 
@@ -210,19 +191,11 @@ int secure_receive(uint8_t* buffer) {
         return ret;
     }
 
-    if (booted) {
-        print_info("Component: Received first packet\n");
-    }
-
     // Send a continue packet to avoid error
     // with two successive receives
 
     char continue_msg[] = "continue";
     send_packet_and_ack(sizeof(continue_msg), continue_msg);
-
-    if (booted) {
-        print_info("Component: Sent Continue Message\n");
-    }
 
     ret = wait_and_receive_packet(auth_buf);
     if (ret < SUCCESS_RETURN) {
@@ -230,16 +203,8 @@ int secure_receive(uint8_t* buffer) {
         return ret;
     }
 
-    if (booted) {
-        print_info("Component: Received Second Packet\n");
-    }
-
     char received_msg[] = "received";
     send_packet_and_ack(sizeof(received_msg), received_msg);
-
-    if (booted) {
-        print_info("Component: Sent Received Message\n");
-    }
 
     message_auth auth;
     memcpy(&auth, auth_buf, sizeof(auth));
@@ -253,10 +218,6 @@ int secure_receive(uint8_t* buffer) {
     if (ret != 0) {
         print_debug("Error decrypting message");
         return ERROR_RETURN;
-    }
-
-    if (booted) {
-        print_info("Component: Finished secure_receive\n");
     }
 
     session.receive_counter = auth.counter;

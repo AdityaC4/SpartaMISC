@@ -48,17 +48,16 @@ def main():
 	# Get ap public key in DER format
 	ap_public_key_der = ap_public_key.export_key(format='DER')
 
-	print("HELLO FROM BUILD.PY")
-	print(f"HOST PUBLIC KEY DER of length {len(host_public_key_der)}:")
-	print(host_public_key_der)
-	print(f"AP PUBLIC KEY DER of length {len(ap_public_key_der)} :")
-	print(ap_public_key_der)
-	print(f"CERTIFICATE DATA OF LENGTH {len(cert_data)}")
-	print(cert_data)
-	print(f"CERTIFICATE HASH OF LENGTH {len(h.digest())}")
-	print(h.hexdigest())
-	print(f"SIGNATURE OF CERTIFICATE of length {len(signature)}:")
-	print(binascii.hexlify(bytearray(signature)))
+	# print(f"HOST PUBLIC KEY DER of length {len(host_public_key_der)}:")
+	# print(host_public_key_der)
+	# print(f"AP PUBLIC KEY DER of length {len(ap_public_key_der)} :")
+	# print(ap_public_key_der)
+	# print(f"CERTIFICATE DATA OF LENGTH {len(cert_data)}")
+	# print(cert_data)
+	# print(f"CERTIFICATE HASH OF LENGTH {len(h.digest())}")
+	# print(h.hexdigest())
+	# print(f"SIGNATURE OF CERTIFICATE of length {len(signature)}:")
+	# print(binascii.hexlify(bytearray(signature)))
 
 	to_bytearray = lambda d: ','.join(hex(b) for b in d)
 

@@ -13,15 +13,6 @@
 
 #include "host_messaging.h"
 
-// Print a message through USB UART and then receive a line over USB UART
-// void recv_input(const char *msg, char *buf) {
-//     print_debug(msg);
-//     fflush(0);
-//     print_ack();
-//     gets(buf);
-//     puts("");
-// }
-
 // Prints a buffer of bytes as a hex string
 void print_hex(uint8_t *buf, size_t len) {
     for (int i = 0; i < len; i++)

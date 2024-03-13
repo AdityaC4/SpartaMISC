@@ -31,7 +31,7 @@
 #ifdef CRYPTO_EXAMPLE
 // Include custom crypto test
 #include "crypto_encryption.h"
-#include "crypto_test.h"
+#include "crypto_publickey.h"
 #include "wolfssl/wolfcrypt/random.h"
 #endif
 
@@ -43,9 +43,6 @@
 // Includes from containerized build
 #include "ectf_params.h"
 #include "global_secrets.h"
-
-// #define STRINGIFY(x) #x
-// #define STRINGIFY_CODE(...) STRINGIFY(__VA_ARGS__)
 
 /********************************* CONSTANTS **********************************/
 
@@ -162,10 +159,6 @@ int booted = 0;
 
 */
 int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
-    if (booted) {
-        print_info("AP: Doing secure_send to I2C address %d. Len: %d\n", address, len);
-    }
-
     byte send_buf[len];
     bzero(send_buf, sizeof(send_buf));
 
@@ -218,18 +211,14 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
         return ret;
     }
 
-    if (booted) {
-        print_info("AP: Sent Packet\n");
-    }
+    // if (booted) {
+    //     print_info("AP: Sent Packet\n");
+    // }
 
     // Wait for a continue message
     // to avoid error with successive sends from AP
     char continue_buf[MAX_I2C_MESSAGE_LEN - 1];
     char expected[] = "continue";
-
-    if (booted) {
-        print_info("AP: Waiting for Continue Message\n");
-    }
 
     ret = poll_and_receive_packet(address, continue_buf);
     if (ret < SUCCESS_RETURN) {
@@ -237,17 +226,9 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
         return ret;
     }
 
-    if (booted) {
-        print_info("AP: Received Continue Message, testing for packet match.\n");
-    }
-
     if (strncmp(continue_buf, expected, sizeof(expected) != 0)) {
         print_error("Continue packet does not match!");
         return -1;
-    }
-
-    if (booted) {
-       print_info("AP: Matches! Sending IV and Auth Data.\n");
     }
 
     // Send IV and authentication data
@@ -260,10 +241,6 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
     char received_buf[MAX_I2C_MESSAGE_LEN - 1];
     char expected2[] = "received";
 
-    if (booted) {
-        print_info("AP: Waiting for Received Message\n");
-    }
-
     ret = poll_and_receive_packet(address, received_buf);
     if (ret < SUCCESS_RETURN) {
         print_error("Error polling for received packet");
@@ -273,10 +250,6 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
     if (strncmp(received_buf, expected2, sizeof(expected2) != 0)) {
         print_error("Received packet does not match!");
         return -1;
-    }
-
-    if (booted) {
-        print_info("AP: Finished secure_send\n");
     }
 
     return ret;
@@ -294,10 +267,6 @@ int secure_send(uint8_t address, uint8_t* buffer, uint8_t len) {
  * This function must be implemented by your team to align with the security requirements.
 */
 int secure_receive(i2c_addr_t address, uint8_t* buffer) {
-    if (booted) {
-        print_info("AP: Doing secure_receive from I2C address %d\n", address);
-    }
-
     byte data_buf[MAX_I2C_MESSAGE_LEN-1];
     bzero(data_buf, sizeof(data_buf));
 
@@ -319,10 +288,6 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
         return -1;
     }
 
-    if (booted) {
-        print_info("AP: Receiving First Packet\n");
-    }
-
     int ret = poll_and_receive_packet(address, auth_buf);
     if (ret < SUCCESS_RETURN) {
         print_error("Error polling for second packet");
@@ -332,26 +297,9 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
     message_auth auth;
     memcpy(&auth, auth_buf, sizeof(auth));
 
-    if (booted) print_info("Got auth data of size %d, expecting data of length %d and counter is %d", ret, auth.length, auth.counter);
-
-    // Handle error case
-    if (auth.counter == 0) {
-        print_info("Encountered error case: counter is 0. Auth data received: ");
-        print_hex_info(&auth, sizeof(auth));
-    }
-
-    if (booted) {
-        print_info("AP: Receiving Second Packet\n");
-    }
-
     ret = poll_and_receive_packet(address, data_buf);
     if (ret < SUCCESS_RETURN) {
         print_error("Error polling for first packet");
-        if (booted) {
-            print_info(
-                "Error polling and receiving first packet: Error Code %d\n",
-                ret);
-        }
         return ret;
     }
 
@@ -369,10 +317,6 @@ int secure_receive(i2c_addr_t address, uint8_t* buffer) {
     if (ret != 0) {
         print_error("Error decrypting message");
         return ERROR_RETURN;
-    }
-
-    if (booted) {
-        print_info("AP: Finished secure_receive\n");
     }
 
     session->receive_counter = auth.counter;
@@ -797,55 +741,6 @@ int attest_component(uint32_t component_id) {
 // Boot message is customized through the AP_BOOT_MSG macro
 void boot() {
     booted = 1;
-    
-    i2c_addr_t addr = component_id_to_i2c_addr(flash_status.component_ids[0]);
-    print_info("Testing secure send from AP to addr %d", addr);
-
-    // Test secure send from AP to comp 1
-    char test[] = "hellofromap";
-    int ret = secure_send(addr, test, sizeof(test));
-    if (ret < 0) {
-        print_error("Error doing secure send from AP!");
-    }
-
-    print_info("Sent, waiting to receive");
-
-    char rcv_buf[MAX_I2C_MESSAGE_LEN - 1];
-    ret = secure_receive(addr, rcv_buf);
-    char expected[] = "hellofromcomp";
-
-    if (strncmp((unsigned char *) rcv_buf, expected, sizeof(expected)) != 0) {
-        print_error("Secure receive on AP failed");
-        return; 
-    }
-
-    print_info("Secure send and receive check working with Component 1");
-
-    addr = component_id_to_i2c_addr(flash_status.component_ids[1]);
-    print_info("Testing secure send from AP to addr %d", addr);
-
-    // Test secure send from AP to comp 2
-    // test[] = "hellofromap";
-    ret = secure_send(addr, test, sizeof(test));
-    if (ret < 0) {
-        print_error("Error doing secure send from AP!");
-    }
-
-    print_info("Sent, waiting to receive");
-
-    // char rcv_buf[MAX_I2C_MESSAGE_LEN - 1];
-    bzero(rcv_buf, sizeof(rcv_buf));
-    ret = secure_receive(addr, rcv_buf);
-    // char expected[] = "hellofromcomp";
-
-    if (strncmp((unsigned char *) rcv_buf, expected, sizeof(expected)) != 0) {
-        print_error("Secure receive on AP failed");
-        return; 
-    }
-
-    print_info("Secure send and receive check working with Component 2");
-
-    // print_info("PARAM: %s\n", STRINGIFY_CODE(POST_BOOT));
 
     // POST BOOT FUNCTIONALITY
     // DO NOT REMOVE IN YOUR DESIGN
