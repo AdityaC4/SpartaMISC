@@ -38,7 +38,7 @@
 #define print_ack() printf("%%ack%%\n"); fflush(stdout)
 
 // Print a message through USB UART and then receive a line over USB UART
-void recv_input(const char *msg, char *buf);
+void recv_input(const char *msg, char *buf, size_t buf_len);
 
 // Prints a buffer of bytes as a hex string
 void print_hex(uint8_t *buf, size_t len);
