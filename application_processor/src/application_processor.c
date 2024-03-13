@@ -804,7 +804,8 @@ int validate_pin() {
         MXC_TRNG_Shutdown();
         MXC_Delay(sleeptime);
     }
-
+    // Always present delay for PIN attempts to max out allowed time
+    MXC_Delay(1800000);
     char buf[50];
     recv_input("Enter pin: ", buf, 7);
     if (!secure_cmp(buf, AP_PIN, 6)) {
@@ -849,7 +850,8 @@ int validate_token() {
         MXC_TRNG_Shutdown();
         MXC_Delay(sleeptime);
     }
-
+    // Always present delay for token attempts to max out allowed time
+    MXC_Delay(4800000);
     char buf[50];
     recv_input("Enter token: ", buf, 9);
     if (!secure_cmp(buf, AP_TOKEN, 8)) {
