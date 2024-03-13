@@ -1,5 +1,6 @@
-# eCTF Insecure Example
-This repository holds the insecure example design for an eCTF MISC system.
+# 2024 eCTF Challenge: Secure Medical Device (SpartaMISC)
+## By the Michigan State University Team (Sp4rtans)
+This repository holds the MSU team's implementation of the design for a MISC system for the 2024 edition of the MITRE eCTF. See [https://ectf.mitre.org/](https://ectf.mitre.org/) for details.
 
 ## Notes
 Currently the project does not make use of `user_settings.h`. If you want to use it make sure `WOLFSSL_USER_SETTINGS` is defined for `PROJ_CFLAGS` in the Makefile to utilize it instead of command line flags.  
