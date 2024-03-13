@@ -2,6 +2,17 @@
 ## By the Michigan State University Team (Sp4rtans)
 This repository holds the MSU team's implementation of the design for a MISC system for the 2024 edition of the MITRE eCTF. See [https://ectf.mitre.org/](https://ectf.mitre.org/) for details.
 
+## Overview
+Our design uses a custom implementation of a TLS handshake with mutual authentication. This is used in the MISC for the Application Processor (AP) and Components to verify each other before booting and establishing a session that allows secure communications. The handshake involves verification of certificates signed by the host (manufacturer) for the device, along with an ephemeral Elliptic Curve Diffie-Hellman to derive a unique shared key and ensure forward secrecy. The communications post boot ensure integrity and authenticity by use of Authenticated Encryption with Associated Data (AEAD).
+
+## Cryptography
+The handshake uses the following cryptographic systems documented in `crypto_publickey.h` and provided wolfSSL's wolfCrypt library:  
+1) Ed25519 used for signing and verification of device certificates and challenge-response
+2) Curve25519 used for the key exchange in Elliptic Curve Diffie-Hellman and derivation of the shared secret for symmetric communication
+
+The symmetric communications utilize the ChaCha20 stream cipher along with Poly1305 message authentication codes for a system that provides AEAD.  
+The above suites were chosen for speed and resource efficiency which were important to meet the specified time requirements on the target hardware.  
+
 ## Notes
 Currently the project does not make use of `user_settings.h`. If you want to use it make sure `WOLFSSL_USER_SETTINGS` is defined for `PROJ_CFLAGS` in the Makefile to utilize it instead of command line flags.  
 
