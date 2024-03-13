@@ -27,8 +27,8 @@
 #define print_hex_success(...) printf("%%success: "); print_hex(__VA_ARGS__); printf("%%"); fflush(stdout)
 
 // Macro definitions to print the specified format for debug messages
-#define print_debug(...) printf("%%debug: "); printf(__VA_ARGS__); printf("%%"); fflush(stdout)
-#define print_hex_debug(...) printf("%%debug: "); print_hex(__VA_ARGS__); printf("%%"); fflush(stdout)
+#define print_debug(...) 
+#define print_hex_debug(...)
 
 // Macro definitions to print the specified format for info messages
 #define print_info(...) printf("%%info: "); printf(__VA_ARGS__); printf("%%"); fflush(stdout)
